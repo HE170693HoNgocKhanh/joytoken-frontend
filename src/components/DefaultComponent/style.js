@@ -1,0 +1,11 @@
+import styled from "styled-components";
+
+export const WrapperDefault = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; 
+
+  main.content {
+    flex: 1; 
+  }
+`;

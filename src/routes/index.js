@@ -1,3 +1,4 @@
+import LoginPage from "../pages/Login/LoginPage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import OrderPage from "../pages/OrderPage/OrderPage";
 import ProductsPage from "../pages/ProductsPage/ProductsPage";
@@ -21,5 +22,11 @@ export const routes = [
    {
     path: "*",
     page: NotFoundPage,
-  }
+  },
+  
+  {
+    path: "/login",
+    page: LoginPage,
+    isShowHeader: true
+  },
 ];
