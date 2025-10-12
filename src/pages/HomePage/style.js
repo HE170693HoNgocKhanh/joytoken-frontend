@@ -122,3 +122,59 @@ export const ProductSection = styled.div`
     font-size: 20px;
   }
 `;
+export const CategorySection = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0;
+  margin-top: 60px;
+
+  .category-card {
+    position: relative;
+    overflow: hidden;
+    height: 420px;
+    cursor: pointer;
+  }
+
+  .category-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.5s ease;
+  }
+
+  .category-card:hover img {
+    transform: scale(1.05);
+  }
+
+  .overlay {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 28px 24px;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+
+  .overlay h3 {
+    color: white;
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+    font-family: "Poppins", sans-serif;
+  }
+
+  .arrow {
+    color: white;
+    font-size: 26px;
+    font-weight: 300;
+    transition: transform 0.3s ease;
+  }
+
+  .category-card:hover .arrow {
+    transform: translateX(8px);
+  }
+`;

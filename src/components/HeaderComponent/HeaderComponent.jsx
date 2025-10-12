@@ -1,20 +1,3 @@
-// import { Col} from 'antd';
-// import React from 'react';
-// import { WrapperHeader } from './style';
-
-// const HeaderComponent = () => {
-//   return (
-//     <div>
-//       <WrapperHeader>
-//         <Col span={8}>JOYTOKEN</Col>
-//         <Col span={8}>col-8</Col>
-//         <Col span={8}>col-8</Col>
-//       </WrapperHeader>
-//     </div>
-//   );
-// };
-
-// export default HeaderComponent;
 import React from "react";
 import { Input, Badge, Menu, Dropdown } from "antd";
 import { ShoppingCartOutlined, UserOutlined, HeartOutlined } from "@ant-design/icons";
@@ -25,12 +8,19 @@ import {
   WrapperSearch,
   WrapperMenu,
 } from "./style";
+import { Link, useNavigate } from "react-router-dom";
 
 const { Search } = Input;
 
 const Header = () => {
+  const navigate = useNavigate();
+
   const onSearch = (value) => {
     console.log("Search:", value);
+  };
+
+  const handleLoginClick = () => {
+    navigate("/login");
   };
 
   // Submenu ANIMALS
@@ -68,19 +58,35 @@ const Header = () => {
 
         {/* Logo */}
         <WrapperLogo>
-          <img
-            src="/images/logo.jpg"
-            alt="logo"
-            style={{ height: "50px" }}
-          />
+          <Link to="/">
+            <img
+              src="/images/logo.jpg"
+              alt="logo"
+              style={{ height: "50px" }}
+            />
+          </Link>
         </WrapperLogo>
 
         {/* Icons */}
         <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-          <UserOutlined style={{ fontSize: "22px", cursor: "pointer" }} />
-          <div>
-            <span>Login</span>
-          </div>
+          <button
+            onClick={handleLoginClick}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "black",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            <UserOutlined />
+            Login
+          </button>
+
           <HeartOutlined style={{ fontSize: "22px", cursor: "pointer" }} />
           <Badge count={2} size="small">
             <ShoppingCartOutlined style={{ fontSize: "22px", cursor: "pointer" }} />
@@ -91,7 +97,9 @@ const Header = () => {
       {/* Menu dưới */}
       <WrapperMenu mode="horizontal">
         <Menu.Item>NEW</Menu.Item>
-        <Menu.Item>EXPLORE ALL</Menu.Item>
+        <Menu.Item>
+          <Link to="/products">EXPLORE ALL</Link>
+        </Menu.Item>
         <Menu.Item>DISCOVER</Menu.Item>
         <Dropdown overlay={animalMenu} trigger={["hover"]}>
           <Menu.Item>ANIMALS</Menu.Item>

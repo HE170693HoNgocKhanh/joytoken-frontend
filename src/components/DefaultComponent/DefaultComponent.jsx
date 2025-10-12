@@ -1,15 +1,16 @@
 
 import HeaderComponent from './../HeaderComponent/HeaderComponent';
 import FooterComponent from '../FooterComponent/FooterComponent';
+import { WrapperDefault } from './style';
 
 const DefaultComponent = ({children}) => {
   return (
-    <div>
+    <WrapperDefault>
       <HeaderComponent/>
       {children}
       <FooterComponent/>
 
-    </div>
+    </WrapperDefault>
   )
 }
 
