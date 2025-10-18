@@ -35,9 +35,17 @@ const products = [
     image: "/images/product-test.jpg",
     rating: 3,
   },
+   {
+    id: 5,
+    name: "Timmy Turtle Decoration",
+    price: 25,
+    label: "Best Seller",
+    image: "/images/product-test.jpg",
+    rating: 3,
+  },
 ];
 
-const ProductPage = () => {
+const ProductList = () => {
   return (
     <ProductGrid>
       {products.map((item) => (
@@ -47,4 +55,4 @@ const ProductPage = () => {
   );
 };
 
-export default ProductPage;
+export default ProductList;

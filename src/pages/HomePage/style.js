@@ -177,4 +177,5 @@ export const CategorySection = styled.div`
   .category-card:hover .arrow {
     transform: translateX(8px);
   }
-`;
+`
+;

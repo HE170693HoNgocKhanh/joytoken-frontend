@@ -7,58 +7,67 @@ export const ProductGrid = styled.div`
   gap: 40px;
   padding: 40px 0;
 `;
-
 export const Card = styled.div`
   position: relative;
-  width: 220px;
+  width: 250px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   text-align: center;
-  transition: transform 0.3s ease;
-  
-  a {
-    color: black;
-    text-decoration: none;
-  }
-
+  padding: 16px;
+  transition: transform 0.3s;
   &:hover {
     transform: translateY(-5px);
   }
 `;
 
-export const Label = styled.div`
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: white;
-  border: 1px solid #00aab5;
-  color: #00aab5;
-  padding: 4px 10px;
-  font-size: 14px;
-  border-radius: 4px;
-  margin-top: 8px;
-`;
-
 export const ProductImage = styled.img`
   width: 100%;
-  height: auto;
-  margin-top: 40px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
 `;
 
 export const ProductName = styled.h3`
-  font-size: 16px;
-  font-weight: 500;
-  margin: 12px 0 4px 0;
+  margin: 10px 0 5px;
+  font-size: 18px;
+  color: #333;
 `;
 
 export const ProductPrice = styled.p`
-  font-size: 15px;
-  color: #333;
-  margin: 4px 0;
+  font-weight: bold;
+  color: #e67e22;
+  font-size: 16px;
+`;
+
+export const Label = styled.span`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ff4757;
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
 `;
 
 export const Rating = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 2px;
-  margin-top: 6px;
+  margin: 6px 0;
+`;
+
+export const AddButton = styled.button`
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin-top: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+
+  &:hover {
+    background-color: #27ae60;
+  }
 `;
