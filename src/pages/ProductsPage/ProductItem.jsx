@@ -1,23 +1,27 @@
-import React from "react";
-import { Card, ProductImage, ProductName, ProductPrice, Label, Rating } from "./style";
+import { Link } from "react-router-dom";
 import { FaStar } from "react-icons/fa";
+import { Card, ProductImage, ProductName, ProductPrice, Label, Rating, AddButton } from "./style";
 
-const ProductItem = ({ product }) => {
+const ProductItem = ({ product, onAddToCart }) => {
   return (
     <Card>
-      <Label>{product.label}</Label>
-      <a href={`/product/${product.id}`}>
+      {product.label && <Label>{product.label}</Label>}
+
+      <Link to={`/product/${product.id}`} style={{ textDecoration: "none", color: "inherit" }}>
         <ProductImage src={product.image} alt={product.name} />
         <ProductName>{product.name}</ProductName>
         <ProductPrice>€{product.price.toFixed(2)}</ProductPrice>
-        {product.rating > 0 && (
-          <Rating>
-            {Array.from({ length: product.rating }).map((_, i) => (
-              <FaStar key={i} color="#f5a623" />
-            ))}
-          </Rating>
-        )}
-      </a>
+      </Link>
+
+      {product.rating > 0 && (
+        <Rating>
+          {Array.from({ length: product.rating }).map((_, i) => (
+            <FaStar key={i} color="#f5a623" />
+          ))}
+        </Rating>
+      )}
+
+      <AddButton onClick={() => onAddToCart(product)}>Add to Cart</AddButton>
     </Card>
   );
 };

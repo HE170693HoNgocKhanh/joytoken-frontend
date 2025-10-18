@@ -95,6 +95,7 @@ const HomePage = () => {
                 }
               >
                 <Card.Meta title={product.name} description={product.price} />
+                
               </Card>
             </div>
           ))}
