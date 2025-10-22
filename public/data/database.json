@@ -1,0 +1,118 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Ricky Rain Frog",
+      "image": "/images/Amuseables.png",
+      "images": ["/images/Amuseables.png", "/images/Amuseables.png", "/images/Amuseables.png"],
+      "price": 30.0,
+      "description": "Ricky Rain Frog siêu mềm mại, đáng yêu và nổi tiếng của Jellycat.",
+      "countInStock": 10,
+      "rating": 5,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": true
+    },
+    {
+      "id": 2,
+      "name": "Bashful Bunny",
+      "image": "/images/Amuseables.png",
+      "images": ["/images/Amuseables.png", "/images/Amuseables.png", "/images/Amuseables.png"],
+      "price": 29.99,
+      "description": "Bunny đáng yêu với bộ lông siêu mịn và cảm giác ấm áp.",
+      "countInStock": 5,
+      "rating": 4,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": true
+    },
+    {
+      "id": 3,
+      "name": "Fuddlewuddle Cat",
+      "image": "/images/Jellies.png",
+      "images": ["/images/Jellies.png", "/images/Amuseables.png", "/images/Jellies.png"],
+      "price": 32.5,
+      "description": "Mèo Fuddlewuddle mềm mịn, cực kỳ thân thiện với trẻ em.",
+      "countInStock": 7,
+      "rating": 4,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": false
+    },
+    {
+      "id": 4,
+      "name": "Odell Octopus",
+      "image": "/images/Bags_Charms.png",
+      "images": ["/images/Bags_Charms.png", "/images/Bags_Charms.png", "/images/Bags_Charms.png"],
+      "price": 35.0,
+      "description": "Bạch tuộc Odell dễ thương, mềm mại với 8 xúc tu cực xinh.",
+      "countInStock": 3,
+      "rating": 5,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": false
+    },
+    {
+      "id": 5,
+      "name": "Amuseable Avocado",
+      "image": "/images/Amuseables.png",
+      "images": ["/images/Amuseables.png", "/images/Amuseables.png", "/images/Amuseables.png"],
+      "price": 25.0,
+      "description": "Quả bơ Amuseable đáng yêu, biểu cảm vui nhộn và dễ thương.",
+      "countInStock": 6,
+      "rating": 4,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": true
+    },
+    {
+      "id": 6,
+      "name": "Cordy Roy Fox",
+      "image": "/images/Jellies.png",
+      "images": ["/images/Jellies.png", "/images/Jellies.png", "/images/Jellies.png"],
+      "price": 28.0,
+      "description": "Cáo Cordy Roy với chất liệu nhung mềm mại và an toàn cho trẻ em.",
+      "countInStock": 8,
+      "rating": 5,
+      "category": "Animals",
+      "variants": [
+        { "name": "Tiny", "stock": true },
+        { "name": "Medium (Out of stock)", "stock": false },
+        { "name": "Large", "stock": true },
+        { "name": "Huge", "stock": true },
+        { "name": "Really Big", "stock": true }
+      ],
+      "personalize": false
+    }
+  ]
+}
