@@ -10,7 +10,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockDashboardStats } from '../../data/mockData';
+import { mockDashboardStats } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 

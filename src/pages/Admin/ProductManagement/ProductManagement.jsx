@@ -29,7 +29,7 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockProducts, mockCategories } from '../../data/mockData';
+import { mockProducts, mockCategories } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 const { Option } = Select;

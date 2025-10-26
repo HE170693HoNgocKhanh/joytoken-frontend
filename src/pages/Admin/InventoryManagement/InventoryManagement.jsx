@@ -30,7 +30,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockInventory, mockProducts } from '../../data/mockData';
+import { mockInventory, mockProducts } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 const { Option } = Select;

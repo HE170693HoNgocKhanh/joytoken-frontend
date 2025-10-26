@@ -44,6 +44,7 @@ export const routes = [
     isShowHeader: true
   },
   // Admin Routes
+  
   {
     path: "/admin/dashboard",
     page: Dashboard,

@@ -26,7 +26,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockUsers } from '../../data/mockData';
+import { mockUsers } from '../../../data/mockData';
 
 const { Title } = Typography;
 const { Option } = Select;

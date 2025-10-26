@@ -27,7 +27,7 @@ import {
   FolderOpenOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockCategories } from '../../data/mockData';
+import { mockCategories } from '../../../data/mockData';
 
 const { Title } = Typography;
 const { Option } = Select;
