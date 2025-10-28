@@ -1,88 +1,164 @@
 import styled from "styled-components";
 
-/* Container */
+/* ----- CART PAGE ----- */
 export const CartContainer = styled.div`
-  max-width: 1100px;
-  margin: 28px auto;
-  padding: 0 16px 60px;
-  font-family: Arial, sans-serif;
+  padding: 2rem 4rem;
+  max-width: 1200px;
+  margin: auto;
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
 `;
 
-/* Header */
 export const CartHeader = styled.div`
-  background: #fff;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 20px;
+  font-weight: 600;
 `;
 
-/* Controls */
 export const ControlsRow = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 1rem;
+  button {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+  }
 `;
 
 export const LeftControls = styled.div`
   display: flex;
-  gap: 12px;
-  button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #333;
-  }
+  gap: 1rem;
+  align-items: center;
 `;
 
 export const RightControls = styled.div`
-  color: #333;
+  color: #555;
 `;
 
-/* Bulk apply */
 export const BulkApplyBox = styled.div`
-  background: #fffaf6;
-  border: 1px solid #ffe6cc;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 14px;
-  display: flex;
-  flex-direction: column;
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  .bulk-inputs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 `;
 
-/* Table area */
+export const SmallInput = styled.input`
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+`;
+
+export const ApplyButton = styled.button`
+  background: #28a745;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  &:hover {
+    background: #218838;
+  }
+`;
+
+export const DeleteButton = styled.button`
+  color: white;
+  background: #e74c3c;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+`;
+
 export const CartTable = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 `;
 
-/* Row / Item */
+export const FooterBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+  margin-top: 1rem;
+  align-items: center;
+`;
+
+export const FooterLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+export const FooterRight = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+`;
+
+export const BuyButton = styled.button`
+  background: #ff5722;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+`;
+
+export const EmptyBox = styled.div`
+  text-align: center;
+  padding: 100px 20px;
+  h3 {
+    font-size: 22px;
+  }
+  p {
+    color: #777;
+  }
+  button {
+    background: #007bff;
+    color: #fff;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+`;
+
+/* ----- CART ITEM ----- */
 export const Row = styled.div`
   display: grid;
-  grid-template-columns: 1fr 120px 160px 140px 160px;
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: 3fr 1fr 1fr 1fr 1fr;
+  align-items: center;
   background: #fff;
-  padding: 14px;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 export const ProductCol = styled.div`
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 10px;
 `;
 
 export const ImageBox = styled.div`
-  width: 92px;
-  height: 92px;
-  background: #fff;
-  border-radius: 6px;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
   overflow: hidden;
   img {
     width: 100%;
@@ -94,177 +170,113 @@ export const ImageBox = styled.div`
 export const InfoBox = styled.div`
   .title {
     font-weight: 600;
-    color: #222;
     margin-bottom: 6px;
-  }
-  .variantRow {
-    margin-top: 6px;
   }
 `;
 
 export const PriceCol = styled.div`
+  font-weight: 500;
+  color: #222;
   text-align: center;
-  color: #333;
-  font-weight: 600;
 `;
 
 export const QtyCol = styled.div`
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   button {
-    width: 32px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    background: #fff;
+    padding: 2px 8px;
+    border: 1px solid #ccc;
+    background: #f8f9fa;
     cursor: pointer;
-  }
-  span {
-    min-width: 26px;
-    text-align: center;
-    display: inline-block;
   }
 `;
 
 export const ActionCol = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  button {
-    background: none;
-    border: none;
-    color: #e64545;
-    cursor: pointer;
-  }
+  align-items: center;
 `;
 
-/* Small controls */
 export const SmallSelect = styled.select`
-  padding: 6px 8px;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  border: 1px solid #ddd;
+  padding: 4px 8px;
 `;
 
-/* Inline editor */
 export const InlineEditBox = styled.div`
-  margin-top: 8px;
-  background: #f9f9f9;
+  background: #f8f9fa;
   padding: 10px;
-  border-radius: 6px;
+  margin-top: 8px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-
-  label {
-    font-size: 0.9rem;
-    color: #333;
-  }
-
-  input[type="text"], input[type="file"], select {
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-  }
-
-  button {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: white;
-    cursor: pointer;
+  input,
+  select {
+    padding: 4px 8px;
   }
 `;
 
 export const PreviewImg = styled.img`
   width: 80px;
   height: 80px;
+  border-radius: 8px;
   object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #ddd;
 `;
 
-/* Footer bar */
-export const FooterBar = styled.div`
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 8px;
-  margin-top: 16px;
-  z-index: 40;
+export const CustomInfoBox = styled.div`
+  margin-top: 4px;
 `;
 
-export const FooterLeft = styled.div`
+export const CustomWrapper = styled.div`
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 6px;
 `;
 
-export const FooterRight = styled.div`
+export const CustomText = styled.span`
+  color: ${(p) => p.color || "#000"};
+  font-weight: bold;
+`;
+
+export const CustomFont = styled.small`
+  color: #777;
+`;
+
+export const ActionButtons = styled.div`
   display: flex;
-  gap: 12px;
-  align-items: center;
-  .total {
-    font-weight: 700;
+  gap: 8px;
+  margin-bottom: 6px;
+  button {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    &:last-child {
+      background: #e74c3c;
+    }
   }
 `;
 
-export const BuyButton = styled.button`
-  background: #ee4d2d;
-  color: white;
-  border: none;
-  padding: 12px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 700;
-`;
-
-/* Small helpers */
-export const SmallInput = styled.input`
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-`;
-
-export const ApplyButton = styled.button`
-  background: #007bff;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-`;
-
-export const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: #e64545;
-  cursor: pointer;
-`;
-
-/* Empty */
-export const EmptyBox = styled.div`
-  max-width: 800px;
-  margin: 80px auto;
-  text-align: center;
-  padding: 30px;
-  border: 1px dashed #eee;
-  border-radius: 8px;
+export const EditButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
   button {
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: #ee4d2d;
-    color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
+    padding: 4px 10px;
     cursor: pointer;
+  }
+  button:first-child {
+    background: #28a745;
+    color: #fff;
+  }
+  button:last-child {
+    background: #ccc;
   }
 `;
