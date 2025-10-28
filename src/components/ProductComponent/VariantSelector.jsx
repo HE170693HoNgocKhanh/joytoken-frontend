@@ -1,9 +1,14 @@
-import React, { useState } from "react";
+import React from "react";
 
-const VariantSelector = ({ product, selectedVariant, setSelectedVariant }) => {
+const VariantSelector = ({
+  product,
+  selectedVariant,
+  setSelectedVariant,
+  setMainImage,
+}) => {
   const handleSelect = (variant) => {
     if (variant.stock === 0) return; // Không cho chọn nếu hết hàng
-    setSelectedVariant(variant.name);
+    setSelectedVariant(variant);
   };
 
   return (
@@ -29,58 +34,54 @@ const VariantSelector = ({ product, selectedVariant, setSelectedVariant }) => {
           marginTop: "10px",
         }}
       >
-        {(product.variants || []).map((variant, index) => {
-          const isActive = selectedVariant === variant.name;
-          const isOutOfStock = variant.stock === 0;
-
-          return (
-            <button
-              key={index}
-              onClick={() => handleSelect(variant)}
-              disabled={isOutOfStock}
+        {product?.variants.map((variant, index) => (
+          <div
+            key={index}
+            onClick={() => handleSelect(variant)}
+            onMouseEnter={() => setMainImage(variant.image)} // 👈 Hover đổi ảnh chính
+            onMouseLeave={() => setMainImage(selectedVariant?.image)} // 👈 Rời chuột thì về ảnh hiện tại
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              border:
+                selectedVariant?._id === variant._id
+                  ? "2px solid #007bff"
+                  : "1px solid #ccc",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              cursor: variant.stock === 0 ? "not-allowed" : "pointer",
+              opacity: variant.stock === 0 ? 0.5 : 1,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <img
+              src={variant.image}
+              alt={variant.name}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: isActive ? "2px solid #007bff" : "1px solid #ccc",
-                backgroundColor: isOutOfStock
-                  ? "#f2f2f2"
-                  : isActive
-                  ? "#e6f0ff"
-                  : "white",
-                cursor: isOutOfStock ? "not-allowed" : "pointer",
-                opacity: isOutOfStock ? 0.6 : 1,
-                transition: "all 0.2s ease",
-                boxShadow: isActive ? "0 0 6px rgba(0,123,255,0.4)" : "none",
+                width: "50px",
+                height: "50px",
+                objectFit: "cover",
+                borderRadius: "6px",
+              }}
+            />
+
+            {/* 👇 Hiển thị tên variant */}
+            <span
+              style={{
+                fontSize: "0.9rem",
+                fontWeight: "500",
               }}
             >
-              {variant.image && (
-                <img
-                  src={variant.image}
-                  alt={variant.name}
-                  style={{
-                    width: "45px",
-                    height: "45px",
-                    objectFit: "cover",
-                    borderRadius: "6px",
-                    filter: isOutOfStock ? "grayscale(100%)" : "none",
-                  }}
-                />
+              {variant.name}
+              {variant.stock === 0 && (
+                <span style={{ color: "red", marginLeft: "4px" }}>
+                  (Hết hàng)
+                </span>
               )}
-              <span style={{ fontWeight: "500", fontSize: "1rem" }}>
-                {variant.name}
-                {isOutOfStock && (
-                  <span style={{ fontSize: "0.85rem", color: "gray" }}>
-                    {" "}
-                    (Hết hàng)
-                  </span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

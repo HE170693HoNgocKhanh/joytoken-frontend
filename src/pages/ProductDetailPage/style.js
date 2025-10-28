@@ -221,33 +221,37 @@ export const Message = styled.div`
 export const RelatedSection = styled.div`
   margin-top: 4rem;
   position: relative;
+  text-align: center; /* 🔹 căn giữa tiêu đề và toàn bộ phần */
+  width: 100%;
 
   h3 {
     font-size: 1.4rem;
     font-weight: 600;
     margin-bottom: 1.5rem;
   }
+
+  /* 🔹 thêm padding để 2 nút không bị che ảnh */
+  padding: 0 60px;
 `;
 
 export const RelatedSlider = styled.div`
   display: flex;
+  justify-content: center; /* 🔹 căn giữa các thẻ */
+  align-items: center;
   gap: 1rem;
-  overflow-x: auto;
+  overflow: hidden; /* 🔹 ẩn bớt phần tràn */
   scroll-behavior: smooth;
   padding-bottom: 10px;
+  flex-wrap: nowrap;
 
+  /* scrollbar tắt để gọn */
   &::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #ccc;
-    border-radius: 4px;
+    display: none;
   }
 `;
 
 export const RelatedCard = styled.div`
-  min-width: 220px;
+  width: 220px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
@@ -305,18 +309,17 @@ export const ArrowButton = styled.button`
   }
 
   &.left {
-    left: -25px;
+    left: 10px; /* 🔹 chỉnh nút gần sát nội dung */
   }
 
   &.right {
-    right: -25px;
+    right: 10px;
   }
 
   svg {
     font-size: 1.2rem;
   }
 `;
-
 
 // 🔽 Thêm vào cuối file style.js
 
@@ -403,7 +406,7 @@ export const RelatedGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-`
+`;
 // ✅ CustomBox: khung bao quanh từng phần custom (ví dụ như thêu tên, chọn màu...)
 export const CustomBox = styled.div`
   background: #fff;
@@ -436,5 +439,3 @@ export const Input = styled.input`
     border-color: #007bff;
   }
 `;
-
-;

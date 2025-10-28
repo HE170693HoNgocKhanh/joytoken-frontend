@@ -21,18 +21,11 @@ import {
   RelatedSection,
   RelatedCard,
   ArrowButton,
-  CustomBox,
-  InputRow,
-  Label,
-  Input,
-  Select,
-  ColorInput,
-  UploadInput,
-  PreviewBox,
   RelatedSlider,
 } from "./style";
 import axios from "axios";
 import VariantSelector from "../../components/ProductComponent/VariantSelector";
+import ReviewSection from "../../components/ProductComponent/ReviewSection";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -40,16 +33,13 @@ const ProductDetailPage = () => {
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
-  const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(product?.variants[0]);
+  const [reviews, setReviews] = useState([]);
+
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState("");
-  const [custom, setCustom] = useState({
-    name: "",
-    color: "#c8a165",
-    font: "Arial",
-    image: null,
-  });
+  const [activeIndex, setActiveIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const itemsPerSlide = 4;
 
@@ -65,12 +55,6 @@ const ProductDetailPage = () => {
     else setCurrentIndex(currentIndex - itemsPerSlide);
   };
 
-  // ----- Upload ảnh custom -----
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) setCustom({ ...custom, image: URL.createObjectURL(file) });
-  };
-
   // ----- Lấy dữ liệu từ database.json -----
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +63,14 @@ const ProductDetailPage = () => {
         const productDetail = await axios.get(
           `http://localhost:8080/api/products/${id}`
         );
+        const relatedProducts = await axios.get(
+          `http://localhost:8080/api/products?category=${productDetail.data.data.category._id}`
+        );
+        const listReview = await axios.get(
+          `http://localhost:8080/api/reviews/product/${id}`
+        );
+        setReviews(listReview.data.data);
+        setRelated(relatedProducts.data.data);
         setProduct(productDetail.data.data);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
@@ -89,7 +81,7 @@ const ProductDetailPage = () => {
 
     fetchData();
   }, [id]);
-
+  console.log(related);
   const images = product?.variants.map((item) => item.image);
 
   // ----- Thêm vào giỏ hàng -----
@@ -101,7 +93,7 @@ const ProductDetailPage = () => {
       return;
     }
 
-    // 2️⃣ Lấy giỏ hàng hiện tại
+    // 2️⃣ Lấy giỏ hàng hiện tại từ localStorage
     let cart = [];
     try {
       cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -111,11 +103,20 @@ const ProductDetailPage = () => {
       cart = [];
     }
 
-    // 3️⃣ Kiểm tra tồn kho của variant (nếu có)
-    const variantData = product.variants?.find(
-      (v) => v.name === selectedVariant
-    );
-    if (variantData && variantData.stock === 0) {
+    // 3️⃣ Lấy dữ liệu variant được chọn
+    const variantData =
+      typeof selectedVariant === "object"
+        ? selectedVariant
+        : product.variants?.find((v) => v.name === selectedVariant);
+
+    if (!variantData) {
+      setMessage("⚠️ Không tìm thấy phân loại hợp lệ!");
+      setTimeout(() => setMessage(null), 2000);
+      return;
+    }
+
+    // Kiểm tra tồn kho
+    if (variantData.stock === 0) {
       setMessage("❌ Phân loại này đã hết hàng!");
       setTimeout(() => setMessage(null), 2000);
       return;
@@ -123,44 +124,49 @@ const ProductDetailPage = () => {
 
     // 4️⃣ Tạo sản phẩm mới
     const newItem = {
-      id: product.id, // ✅ luôn có id duy nhất
+      id: id, // id sản phẩm gốc
       name: product.name,
-      image: product.image || variantData?.image || "",
+      image: variantData?.image || product.image || "",
       price: product.price,
       variants: product.variants,
-      selectedVariant: selectedVariant,
+      selectedVariant: variantData,
       quantity: 1,
-      stock: variantData?.stock ?? product.stock ?? null,
-      selected: false, // checkbox chọn/xóa
+      selected: false,
     };
 
-    // 5️⃣ Kiểm tra sản phẩm trùng
+    // 5️⃣ Kiểm tra sản phẩm trùng (id + variant._id)
     const existingIndex = cart.findIndex(
       (item) =>
         item.id === newItem.id &&
-        item.selectedVariant === newItem.selectedVariant
+        item.selectedVariant?._id === newItem.selectedVariant._id
     );
 
     if (existingIndex !== -1) {
-      // Gộp số lượng nhưng không vượt quá stock
+      // Nếu đã tồn tại → tăng số lượng
       const existingItem = cart[existingIndex];
+
       if (existingItem.stock && existingItem.quantity >= existingItem.stock) {
         setMessage("⚠️ Đã đạt giới hạn số lượng tồn kho!");
         setTimeout(() => setMessage(null), 2000);
         return;
       }
-      cart[existingIndex].quantity += 1;
+
+      // ✅ Tăng quantity
+      cart[existingIndex] = {
+        ...existingItem,
+        quantity: existingItem.quantity + 1,
+      };
     } else {
+      // ✅ Thêm mới vào giỏ
       cart.push(newItem);
     }
 
     // 6️⃣ Lưu lại vào localStorage
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    // 7️⃣ Thông báo và điều hướng
+    // 7️⃣ Thông báo
     setMessage("🛍️ Đã thêm sản phẩm vào giỏ hàng!");
     setTimeout(() => setMessage(null), 2000);
-    navigate("/cart");
   };
 
   // ----- Thêm vào wishlist -----
@@ -189,7 +195,7 @@ const ProductDetailPage = () => {
       <ProductLayout>
         {/* Ảnh chính */}
         <ImageWrapper>
-          <ProductImage src={product.image} alt={product.name} />
+          <ProductImage src={mainImage || product.image} alt={product.name} />
           <div
             style={{
               display: "flex",
@@ -203,14 +209,19 @@ const ProductDetailPage = () => {
                 key={index}
                 src={img}
                 alt={`Ảnh ${index + 1}`}
-                onClick={() => setMainImage(img)}
+                onClick={() => {
+                  setMainImage(img);
+                  setActiveIndex(index); // ✅ thêm state để lưu index đang active
+                }}
                 style={{
                   width: "70px",
                   height: "70px",
                   borderRadius: "8px",
                   cursor: "pointer",
                   border:
-                    mainImage === img ? "2px solid #007bff" : "1px solid #ccc",
+                    activeIndex === index
+                      ? "2px solid #007bff"
+                      : "1px solid #ccc",
                   objectFit: "cover",
                   transition: "transform 0.2s ease",
                 }}
@@ -248,6 +259,7 @@ const ProductDetailPage = () => {
               product={product}
               selectedVariant={selectedVariant}
               setSelectedVariant={setSelectedVariant}
+              setMainImage={setMainImage}
             />
           </StyleSelector>
 
@@ -263,6 +275,8 @@ const ProductDetailPage = () => {
           {message && <Message>{message}</Message>}
         </InfoWrapper>
       </ProductLayout>
+
+      <ReviewSection productId={id} initialReviews={reviews} />
 
       {/* 🧸 Related Products */}
       <RelatedSection>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   Row,
   ProductCol,
@@ -8,88 +8,108 @@ import {
   QtyCol,
   ActionCol,
   SmallSelect,
-  InlineEditBox,
-  PreviewImg,
-  CustomInfoBox,
-  CustomWrapper,
-  CustomText,
-  CustomFont,
   ActionButtons,
-  EditButtons,
 } from "./style.js";
+import { Button } from "antd";
 
 const CartItem = ({
   item,
+  cart, // ✅ nhận thêm cart
   onToggle,
   onQtyChange,
   onVariantChange,
   onRemove,
 }) => {
-  const [openEdit, setOpenEdit] = useState(false);
-  const [variants, setVariants] = useState([]);
-
-  useEffect(() => {
-    const fetchVariants = async () => {
-      try {
-        const res = await fetch("/data/database.json");
-        const data = await res.json();
-        const found = data.products.find((p) => p.id === item.id);
-        if (found?.variants) setVariants(found.variants);
-      } catch (err) {
-        console.error("Lỗi tải variants:", err);
-      }
-    };
-    fetchVariants();
-  }, [item.id]);
+  const { name, image, price, quantity, selected, variants, selectedVariant } =
+    item;
 
   return (
     <Row>
+      {/* Checkbox */}
       <ProductCol>
-        <input type="checkbox" checked={!!item.selected} onChange={onToggle} />
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={onToggle}
+          style={{ marginRight: "8px" }}
+        />
 
+        {/* Ảnh */}
         <ImageBox>
-          <img src={item.image} alt={item.name} />
+          <img
+            src={selectedVariant?.image || image}
+            alt={name}
+            style={{
+              width: "70px",
+              height: "70px",
+              borderRadius: "8px",
+              objectFit: "cover",
+            }}
+          />
         </ImageBox>
 
+        {/* Tên và variant */}
         <InfoBox>
-          <div className="title">{item.name}</div>
+          <div className="title" style={{ fontWeight: 600 }}>
+            {name}
+          </div>
 
-          <div className="variantRow">
+          <div className="variantRow" style={{ marginTop: "4px" }}>
             <SmallSelect
-              value={item.variant || ""}
+              value={selectedVariant?.name || ""}
               onChange={(e) => onVariantChange(e.target.value)}
             >
-              <option value="">Choose Style</option>
-              {variants.map((v, i) => (
-                <option
-                  key={i}
-                  value={v.name}
-                  disabled={!v.stock}
-                  style={!v.stock ? { color: "#999" } : {}}
-                >
-                  {v.name}
-                </option>
-              ))}
+              {variants?.map((v, i) => {
+                const isTaken = cart.some(
+                  (c) =>
+                    c.id === item.id &&
+                    c.selectedVariant?._id === v._id &&
+                    c.selectedVariant?._id !== item.selectedVariant?._id
+                );
+
+                return (
+                  <option
+                    key={i}
+                    value={v.name}
+                    disabled={v.stock === 0 || isTaken}
+                    style={v.stock === 0 || isTaken ? { color: "#999" } : {}}
+                  >
+                    {v.name}
+                    {v.stock === 0
+                      ? " (Hết hàng)"
+                      : isTaken
+                      ? " (Đã có trong giỏ)"
+                      : ""}
+                  </option>
+                );
+              })}
             </SmallSelect>
           </div>
         </InfoBox>
       </ProductCol>
 
-      <PriceCol>₫{(item.price || 0).toLocaleString()}</PriceCol>
+      {/* Giá */}
+      <PriceCol>₫{(price || 0).toLocaleString()}</PriceCol>
 
+      {/* Số lượng */}
       <QtyCol>
-        <button onClick={() => onQtyChange(Math.max(1, item.qty - 1))}>
+        <button
+          onClick={() => onQtyChange(Math.max(1, quantity - 1))}
+          disabled={quantity <= 1}
+        >
           -
         </button>
-        <span>{item.qty}</span>
-        <button onClick={() => onQtyChange(item.qty + 1)}>+</button>
+        <span>{quantity}</span>
+        <button onClick={() => onQtyChange(quantity + 1)}>+</button>
       </QtyCol>
-      <PriceCol>
-        ₫{((item.price || 0) * (item.qty || 1)).toLocaleString()}
-      </PriceCol>
+
+      {/* Tổng giá */}
+      <PriceCol>₫{((price || 0) * quantity).toLocaleString()}</PriceCol>
+
+      {/* Hành động */}
       <ActionCol>
         <ActionButtons>
-          <button onClick={onRemove}>Xóa</button>
+          <Button onClick={onRemove}>Xoá</Button>
         </ActionButtons>
       </ActionCol>
     </Row>

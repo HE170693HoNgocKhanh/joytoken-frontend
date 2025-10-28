@@ -49,7 +49,11 @@ const LoginPage = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       alert("Đăng nhập thành công!");
-      window.location.href = "/"; // chuyển trang (tùy bạn)
+      if (data.user.role === "admin") {
+        window.location.href = "/admin/dashboard";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err) {
       setError(err.message);
     } finally {
