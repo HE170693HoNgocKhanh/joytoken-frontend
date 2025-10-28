@@ -49,7 +49,7 @@ const LoginPage = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       alert("Đăng nhập thành công!");
-      window.location.href = "/profile"; // chuyển trang (tùy bạn)
+      window.location.href = "/"; // chuyển trang (tùy bạn)
     } catch (err) {
       setError(err.message);
     } finally {

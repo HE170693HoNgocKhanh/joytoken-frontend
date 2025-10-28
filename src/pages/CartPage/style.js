@@ -146,7 +146,7 @@ export const Row = styled.div`
   background: #fff;
   padding: 12px;
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 export const ProductCol = styled.div`
@@ -213,7 +213,8 @@ export const InlineEditBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-  input, select {
+  input,
+  select {
     padding: 4px 8px;
   }
 `;

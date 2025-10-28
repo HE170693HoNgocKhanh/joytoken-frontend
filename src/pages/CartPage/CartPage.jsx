@@ -39,6 +39,7 @@ const CartPage = () => {
     }));
     setCart(normalized);
   }, []);
+  console.log("cart", cart);
 
   useEffect(() => {
     if (cart.length === 0) setSelectAll(false);
@@ -76,15 +77,6 @@ const CartPage = () => {
     persist(next);
   };
 
-  const updateCustom = (id, custom) => {
-    const next = cart.map((i) =>
-      i.id === id
-        ? { ...i, custom: { ...(i.custom || {}), ...custom } }
-        : i
-    );
-    persist(next);
-  };
-
   const removeItem = (id) => {
     const next = cart.filter((i) => i.id !== id);
     persist(next);
@@ -92,24 +84,6 @@ const CartPage = () => {
 
   const deleteSelected = () => {
     const next = cart.filter((i) => !i.selected);
-    persist(next);
-  };
-
-  const applyBulkToSelected = () => {
-    const next = cart.map((i) =>
-      i.selected
-        ? {
-            ...i,
-            custom: {
-              ...(i.custom || {}),
-              name: bulk.name,
-              color: bulk.color,
-              font: bulk.font,
-              image: bulk.image || (i.custom && i.custom.image),
-            },
-          }
-        : i
-    );
     persist(next);
   };
 
@@ -158,43 +132,6 @@ const CartPage = () => {
         </RightControls>
       </ControlsRow>
 
-      <BulkApplyBox>
-        <div>Áp dụng cho sản phẩm đã chọn</div>
-        <div className="bulk-inputs">
-          <SmallInput
-            placeholder="Tên thêu"
-            value={bulk.name}
-            onChange={(e) => setBulk({ ...bulk, name: e.target.value })}
-          />
-          <input
-            type="color"
-            value={bulk.color}
-            onChange={(e) => setBulk({ ...bulk, color: e.target.value })}
-          />
-          <select
-            value={bulk.font}
-            onChange={(e) => setBulk({ ...bulk, font: e.target.value })}
-          >
-            <option>Arial</option>
-            <option>Verdana</option>
-            <option>Cursive</option>
-            <option>Times New Roman</option>
-          </select>
-          <label>
-            Upload
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const f = e.target.files[0];
-                if (f) setBulk({ ...bulk, image: URL.createObjectURL(f) });
-              }}
-            />
-          </label>
-          <ApplyButton onClick={applyBulkToSelected}>Áp dụng</ApplyButton>
-        </div>
-      </BulkApplyBox>
-
       <CartTable>
         {cart.map((item) => (
           <CartItem
@@ -203,7 +140,6 @@ const CartPage = () => {
             onToggle={() => toggleSelectItem(item.id)}
             onQtyChange={(q) => updateQty(item.id, q)}
             onVariantChange={(v) => updateVariant(item.id, v)}
-            onCustomChange={(c) => updateCustom(item.id, c)}
             onRemove={() => removeItem(item.id)}
           />
         ))}
@@ -225,7 +161,10 @@ const CartPage = () => {
             Tổng cộng ({cart.filter((i) => i.selected).length} sp):{" "}
             <strong>₫{total.toLocaleString()}</strong>
           </div>
-          <BuyButton disabled={total === 0} onClick={() => navigate("/checkout")}>
+          <BuyButton
+            disabled={total === 0}
+            onClick={() => navigate("/checkout")}
+          >
             Mua hàng
           </BuyButton>
         </FooterRight>

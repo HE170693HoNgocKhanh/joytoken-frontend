@@ -3,13 +3,36 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaStar, FaHeart } from "react-icons/fa";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
 import {
-  Container, BackButton, ProductLayout, ImageWrapper, ProductImage,
-  InfoWrapper, ProductTitle, Price, Description, StockStatus,
-  ActionWrapper, StyleSelector, AddToCartButton, WishlistButton,
-  Message, RelatedSection, RelatedCard, ArrowButton,
-  CustomBox, InputRow, Label, Input, Select, ColorInput, UploadInput, PreviewBox,
-  RelatedSlider
+  Container,
+  BackButton,
+  ProductLayout,
+  ImageWrapper,
+  ProductImage,
+  InfoWrapper,
+  ProductTitle,
+  Price,
+  Description,
+  StockStatus,
+  ActionWrapper,
+  StyleSelector,
+  AddToCartButton,
+  WishlistButton,
+  Message,
+  RelatedSection,
+  RelatedCard,
+  ArrowButton,
+  CustomBox,
+  InputRow,
+  Label,
+  Input,
+  Select,
+  ColorInput,
+  UploadInput,
+  PreviewBox,
+  RelatedSlider,
 } from "./style";
+import axios from "axios";
+import VariantSelector from "../../components/ProductComponent/VariantSelector";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -32,11 +55,13 @@ const ProductDetailPage = () => {
 
   // ----- Xử lý chuyển slide sản phẩm liên quan -----
   const handleNext = () => {
-    if (currentIndex + itemsPerSlide < related.length) setCurrentIndex(currentIndex + itemsPerSlide);
+    if (currentIndex + itemsPerSlide < related.length)
+      setCurrentIndex(currentIndex + itemsPerSlide);
     else setCurrentIndex(0);
   };
   const handlePrev = () => {
-    if (currentIndex === 0) setCurrentIndex(Math.max(related.length - itemsPerSlide, 0));
+    if (currentIndex === 0)
+      setCurrentIndex(Math.max(related.length - itemsPerSlide, 0));
     else setCurrentIndex(currentIndex - itemsPerSlide);
   };
 
@@ -51,18 +76,10 @@ const ProductDetailPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/data/database.json");
-        const data = await res.json();
-
-        const found = data.products.find((p) => p.id === Number(id));
-        setProduct(found || null);
-        if (found?.images?.length) setMainImage(found.images[0]);
-        else setMainImage(found?.image || "");
-
-        const relatedProducts = data.products.filter(
-          (p) => p.category === found?.category && p.id !== found.id
+        const productDetail = await axios.get(
+          `http://localhost:8080/api/products/${id}`
         );
-        setRelated(relatedProducts);
+        setProduct(productDetail.data.data);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
       } finally {
@@ -73,43 +90,82 @@ const ProductDetailPage = () => {
     fetchData();
   }, [id]);
 
+  const images = product?.variants.map((item) => item.image);
+
   // ----- Thêm vào giỏ hàng -----
   const handleAddToCart = () => {
+    // 1️⃣ Kiểm tra variant
     if (!selectedVariant || selectedVariant === "Choose Options") {
-      setMessage("⚠️ Vui lòng chọn size trước khi thêm vào giỏ hàng!");
+      setMessage("⚠️ Vui lòng chọn phân loại trước khi thêm vào giỏ hàng!");
       setTimeout(() => setMessage(null), 2000);
       return;
     }
 
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    // 2️⃣ Lấy giỏ hàng hiện tại
+    let cart = [];
+    try {
+      cart = JSON.parse(localStorage.getItem("cart")) || [];
+      if (!Array.isArray(cart)) cart = [];
+    } catch (error) {
+      console.error("Cart parse error:", error);
+      cart = [];
+    }
 
+    // 3️⃣ Kiểm tra tồn kho của variant (nếu có)
+    const variantData = product.variants?.find(
+      (v) => v.name === selectedVariant
+    );
+    if (variantData && variantData.stock === 0) {
+      setMessage("❌ Phân loại này đã hết hàng!");
+      setTimeout(() => setMessage(null), 2000);
+      return;
+    }
+
+    // 4️⃣ Tạo sản phẩm mới
     const newItem = {
-      ...product,
-      qty: 1,
-      variant: selectedVariant,
-      custom, // gồm name, color, font, image
-      selected: false, // để dùng cho checkbox chọn/xóa
+      id: product.id, // ✅ luôn có id duy nhất
+      name: product.name,
+      image: product.image || variantData?.image || "",
+      price: product.price,
+      variants: product.variants,
+      selectedVariant: selectedVariant,
+      quantity: 1,
+      stock: variantData?.stock ?? product.stock ?? null,
+      selected: false, // checkbox chọn/xóa
     };
 
-    // Nếu cùng sản phẩm + cùng variant thì gộp số lượng
+    // 5️⃣ Kiểm tra sản phẩm trùng
     const existingIndex = cart.findIndex(
-      (item) => item.id === product.id && item.variant === selectedVariant
+      (item) =>
+        item.id === newItem.id &&
+        item.selectedVariant === newItem.selectedVariant
     );
+
     if (existingIndex !== -1) {
-      cart[existingIndex].qty += 1;
+      // Gộp số lượng nhưng không vượt quá stock
+      const existingItem = cart[existingIndex];
+      if (existingItem.stock && existingItem.quantity >= existingItem.stock) {
+        setMessage("⚠️ Đã đạt giới hạn số lượng tồn kho!");
+        setTimeout(() => setMessage(null), 2000);
+        return;
+      }
+      cart[existingIndex].quantity += 1;
     } else {
       cart.push(newItem);
     }
 
+    // 6️⃣ Lưu lại vào localStorage
     localStorage.setItem("cart", JSON.stringify(cart));
+
+    // 7️⃣ Thông báo và điều hướng
     setMessage("🛍️ Đã thêm sản phẩm vào giỏ hàng!");
     setTimeout(() => setMessage(null), 2000);
-
     navigate("/cart");
   };
 
   // ----- Thêm vào wishlist -----
   const handleAddToWishlist = () => {
+    const { id } = useParams();
     const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
     const exists = wishlist.find((item) => item.id === product.id);
     if (!exists) {
@@ -123,7 +179,8 @@ const ProductDetailPage = () => {
   };
 
   if (loading) return <div style={{ padding: "2rem" }}>Đang tải...</div>;
-  if (!product) return <div style={{ padding: "2rem" }}>Không tìm thấy sản phẩm</div>;
+  if (!product)
+    return <div style={{ padding: "2rem" }}>Không tìm thấy sản phẩm</div>;
 
   return (
     <Container>
@@ -132,9 +189,16 @@ const ProductDetailPage = () => {
       <ProductLayout>
         {/* Ảnh chính */}
         <ImageWrapper>
-          <ProductImage src={mainImage} alt={product.name} />
-          <div style={{ display: "flex", gap: "10px", marginTop: "10px", justifyContent: "center" }}>
-            {product.images?.map((img, index) => (
+          <ProductImage src={product.image} alt={product.name} />
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "10px",
+              justifyContent: "center",
+            }}
+          >
+            {images?.map((img, index) => (
               <img
                 key={index}
                 src={img}
@@ -145,12 +209,17 @@ const ProductDetailPage = () => {
                   height: "70px",
                   borderRadius: "8px",
                   cursor: "pointer",
-                  border: mainImage === img ? "2px solid #007bff" : "1px solid #ccc",
+                  border:
+                    mainImage === img ? "2px solid #007bff" : "1px solid #ccc",
                   objectFit: "cover",
                   transition: "transform 0.2s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.transform = "scale(1.1)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.transform = "scale(1)")
+                }
               />
             ))}
           </div>
@@ -175,88 +244,17 @@ const ProductDetailPage = () => {
 
           {/* 🎯 Chọn variant (size/style) */}
           <StyleSelector>
-            <label style={{ fontWeight: "600" }}>
-              Chọn phân loại{" "}
-              <span style={{ fontSize: "0.9rem", color: "#007bff", cursor: "pointer" }}>
-                (Hướng dẫn chọn size)
-              </span>
-            </label>
-
-            <select
-              value={selectedVariant}
-              onChange={(e) => setSelectedVariant(e.target.value)}
-              style={{
-                marginTop: "8px",
-                padding: "10px",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
-            >
-              <option>Choose Options</option>
-              {(product.variants || ["Size S", "Size M", "Size L"]).map((variant, index) => (
-                <option key={index} value={variant.name || variant}>
-                  {variant.name || variant}
-                </option>
-              ))}
-            </select>
+            <VariantSelector
+              product={product}
+              selectedVariant={selectedVariant}
+              setSelectedVariant={setSelectedVariant}
+            />
           </StyleSelector>
 
-          {/* 🧵 Custom Design */}
-          <CustomBox>
-            <h4>🪡 Thiết kế của bạn</h4>
-
-            <InputRow>
-              <Label>Tên thêu:</Label>
-              <Input
-                type="text"
-                placeholder="Nhập tên..."
-                value={custom.name}
-                onChange={(e) => setCustom({ ...custom, name: e.target.value })}
-              />
-            </InputRow>
-
-            <InputRow>
-              <Label>Màu chữ:</Label>
-              <ColorInput
-                type="color"
-                value={custom.color}
-                onChange={(e) => setCustom({ ...custom, color: e.target.value })}
-              />
-            </InputRow>
-
-            <InputRow>
-              <Label>Kiểu chữ:</Label>
-              <Select
-                value={custom.font}
-                onChange={(e) => setCustom({ ...custom, font: e.target.value })}
-              >
-                <option value="Arial">Arial</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Pacifico">Pacifico</option>
-                <option value="Dancing Script">Dancing Script</option>
-                <option value="Comic Sans MS">Comic Sans</option>
-              </Select>
-            </InputRow>
-
-            <InputRow>
-              <Label>Upload ảnh:</Label>
-              <UploadInput type="file" accept="image/*" onChange={handleImageUpload} />
-            </InputRow>
-
-            <PreviewBox>
-              {custom.image ? (
-                <img src={custom.image} alt="preview" style={{ width: "100%", borderRadius: "10px" }} />
-              ) : (
-                <p style={{ color: custom.color, fontFamily: custom.font }}>
-                  {custom.name || "Preview chữ ở đây..."}
-                </p>
-              )}
-            </PreviewBox>
-          </CustomBox>
-
           <ActionWrapper>
-            <AddToCartButton onClick={handleAddToCart}>🛒 Add to Bag</AddToCartButton>
+            <AddToCartButton onClick={handleAddToCart}>
+              🛒 Add to Bag
+            </AddToCartButton>
             <WishlistButton onClick={handleAddToWishlist}>
               <FaHeart /> Add to Wishlist
             </WishlistButton>
@@ -275,13 +273,18 @@ const ProductDetailPage = () => {
           </ArrowButton>
 
           <RelatedSlider>
-            {related.slice(currentIndex, currentIndex + itemsPerSlide).map((r) => (
-              <RelatedCard key={r.id} onClick={() => navigate(`/product/${r.id}`)}>
-                <img src={r.image} alt={r.name} />
-                <div className="name">{r.name}</div>
-                <div className="price">₫{r.price.toLocaleString()}</div>
-              </RelatedCard>
-            ))}
+            {related
+              .slice(currentIndex, currentIndex + itemsPerSlide)
+              .map((r) => (
+                <RelatedCard
+                  key={r.id}
+                  onClick={() => navigate(`/product/${r.id}`)}
+                >
+                  <img src={r.image} alt={r.name} />
+                  <div className="name">{r.name}</div>
+                  <div className="price">₫{r.price.toLocaleString()}</div>
+                </RelatedCard>
+              ))}
           </RelatedSlider>
 
           <ArrowButton className="right" onClick={handleNext}>
