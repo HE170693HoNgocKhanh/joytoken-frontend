@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Table,
   Card,
@@ -18,7 +18,7 @@ import {
   Statistic,
   Image,
   Upload,
-} from "antd";
+} from 'antd';
 import {
   ShoppingOutlined,
   EditOutlined,
@@ -27,9 +27,9 @@ import {
   ExportOutlined,
   UploadOutlined,
   EyeOutlined,
-} from "@ant-design/icons";
-import styled from "styled-components";
-import { mockProducts, mockCategories } from "../../../data/mockData";
+} from '@ant-design/icons';
+import styled from 'styled-components';
+import { mockProducts, mockCategories } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -54,26 +54,25 @@ const ProductManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [form] = Form.useForm();
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchText.toLowerCase())
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    product.sku.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
     }).format(amount);
   };
 
   const productStats = {
     total: products.length,
-    active: products.filter((p) => p.status === "active").length,
-    lowStock: products.filter((p) => p.stock <= p.minStock).length,
-    totalValue: products.reduce((sum, p) => sum + p.price * p.stock, 0),
+    active: products.filter(p => p.status === 'active').length,
+    lowStock: products.filter(p => p.stock <= p.minStock).length,
+    totalValue: products.reduce((sum, p) => sum + (p.price * p.stock), 0),
   };
 
   const showModal = (product = null) => {
@@ -95,57 +94,52 @@ const ProductManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-
+      
       if (editingProduct) {
         // Update product
-        setProducts(
-          products.map((product) =>
-            product.id === editingProduct.id
-              ? {
-                  ...product,
-                  ...values,
-                  category: mockCategories.find(
-                    (c) => c.id === values.categoryId
-                  )?.name,
-                  updatedAt: new Date().toISOString().split("T")[0],
-                }
-              : product
-          )
-        );
-        message.success("Cập nhật sản phẩm thành công");
+        setProducts(products.map(product => 
+          product.id === editingProduct.id 
+            ? { 
+                ...product, 
+                ...values, 
+                category: mockCategories.find(c => c.id === values.categoryId)?.name,
+                updatedAt: new Date().toISOString().split('T')[0] 
+              }
+            : product
+        ));
+        message.success('Cập nhật sản phẩm thành công');
       } else {
         // Add new product
         const newProduct = {
-          id: Math.max(...products.map((p) => p.id)) + 1,
+          id: Math.max(...products.map(p => p.id)) + 1,
           ...values,
-          category: mockCategories.find((c) => c.id === values.categoryId)
-            ?.name,
-          images: ["https://via.placeholder.com/300x300?text=New+Product"],
-          createdAt: new Date().toISOString().split("T")[0],
-          updatedAt: new Date().toISOString().split("T")[0],
+          category: mockCategories.find(c => c.id === values.categoryId)?.name,
+          images: ['https://via.placeholder.com/300x300?text=New+Product'],
+          createdAt: new Date().toISOString().split('T')[0],
+          updatedAt: new Date().toISOString().split('T')[0],
         };
         setProducts([...products, newProduct]);
-        message.success("Thêm sản phẩm mới thành công");
+        message.success('Thêm sản phẩm mới thành công');
       }
-
+      
       setIsModalVisible(false);
       setEditingProduct(null);
       form.resetFields();
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error('Validation failed:', error);
     }
   };
 
   const handleDelete = (productId) => {
-    setProducts(products.filter((product) => product.id !== productId));
-    message.success("Xóa sản phẩm thành công");
+    setProducts(products.filter(product => product.id !== productId));
+    message.success('Xóa sản phẩm thành công');
   };
 
   const columns = [
     {
-      title: "Hình ảnh",
-      dataIndex: "images",
-      key: "images",
+      title: 'Hình ảnh',
+      dataIndex: 'images',
+      key: 'images',
       width: 80,
       render: (images) => (
         <Image
@@ -153,16 +147,14 @@ const ProductManagement = () => {
           height={50}
           src={images?.[0]}
           placeholder={
-            <div
-              style={{
-                width: 50,
-                height: 50,
-                background: "#f0f0f0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <div style={{ 
+              width: 50, 
+              height: 50, 
+              background: '#f0f0f0', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
               <ShoppingOutlined />
             </div>
           }
@@ -170,9 +162,9 @@ const ProductManagement = () => {
       ),
     },
     {
-      title: "Tên sản phẩm",
-      dataIndex: "name",
-      key: "name",
+      title: 'Tên sản phẩm',
+      dataIndex: 'name',
+      key: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (text, record) => (
         <div>
@@ -184,39 +176,37 @@ const ProductManagement = () => {
       ),
     },
     {
-      title: "Danh mục",
-      dataIndex: "category",
-      key: "category",
-      filters: mockCategories.map((cat) => ({
+      title: 'Danh mục',
+      dataIndex: 'category',
+      key: 'category',
+      filters: mockCategories.map(cat => ({
         text: cat.name,
         value: cat.name,
       })),
       onFilter: (value, record) => record.category === value,
     },
     {
-      title: "Giá bán",
-      dataIndex: "price",
-      key: "price",
+      title: 'Giá bán',
+      dataIndex: 'price',
+      key: 'price',
       sorter: (a, b) => a.price - b.price,
       render: (price) => formatCurrency(price),
     },
     {
-      title: "Giá vốn",
-      dataIndex: "costPrice",
-      key: "costPrice",
+      title: 'Giá vốn',
+      dataIndex: 'costPrice',
+      key: 'costPrice',
       render: (costPrice) => formatCurrency(costPrice),
     },
     {
-      title: "Tồn kho",
-      dataIndex: "stock",
-      key: "stock",
+      title: 'Tồn kho',
+      dataIndex: 'stock',
+      key: 'stock',
       sorter: (a, b) => a.stock - b.stock,
       render: (stock, record) => (
         <div>
-          <Text
-            strong={stock <= record.minStock}
-            type={stock <= record.minStock ? "danger" : "default"}
-          >
+          <Text strong={stock <= record.minStock} 
+                type={stock <= record.minStock ? 'danger' : 'default'}>
             {stock}
           </Text>
           {stock <= record.minStock && (
@@ -228,23 +218,23 @@ const ProductManagement = () => {
       ),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       filters: [
-        { text: "Hoạt động", value: "active" },
-        { text: "Không hoạt động", value: "inactive" },
+        { text: 'Hoạt động', value: 'active' },
+        { text: 'Không hoạt động', value: 'inactive' },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Hoạt động" : "Không hoạt động"}
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
         </Tag>
       ),
     },
     {
-      title: "Thao tác",
-      key: "action",
+      title: 'Thao tác',
+      key: 'action',
       width: 150,
       render: (_, record) => (
         <Space>
@@ -295,7 +285,7 @@ const ProductManagement = () => {
             <Statistic
               title="Tổng sản phẩm"
               value={productStats.total}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{ color: '#1890ff' }}
             />
           </StatCard>
         </Col>
@@ -304,7 +294,7 @@ const ProductManagement = () => {
             <Statistic
               title="Đang hoạt động"
               value={productStats.active}
-              valueStyle={{ color: "#3f8600" }}
+              valueStyle={{ color: '#3f8600' }}
             />
           </StatCard>
         </Col>
@@ -313,7 +303,7 @@ const ProductManagement = () => {
             <Statistic
               title="Sắp hết hàng"
               value={productStats.lowStock}
-              valueStyle={{ color: "#cf1322" }}
+              valueStyle={{ color: '#cf1322' }}
             />
           </StatCard>
         </Col>
@@ -323,20 +313,14 @@ const ProductManagement = () => {
               title="Giá trị tồn kho"
               value={productStats.totalValue}
               formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: "#722ed1" }}
+              valueStyle={{ color: '#722ed1' }}
             />
           </StatCard>
         </Col>
       </Row>
 
       <StyledCard>
-        <div
-          style={{
-            marginBottom: 16,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Space>
             <Input.Search
               placeholder="Tìm kiếm theo tên hoặc SKU"
@@ -348,11 +332,7 @@ const ProductManagement = () => {
           </Space>
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Excel</Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => showModal()}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
               Thêm Sản phẩm
             </Button>
           </Space>
@@ -373,23 +353,25 @@ const ProductManagement = () => {
       </StyledCard>
 
       <Modal
-        title={editingProduct ? "Chỉnh sửa Sản phẩm" : "Thêm Sản phẩm mới"}
+        title={editingProduct ? 'Chỉnh sửa Sản phẩm' : 'Thêm Sản phẩm mới'}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={handleCancel}
         width={800}
-        okText={editingProduct ? "Cập nhật" : "Thêm"}
+        okText={editingProduct ? 'Cập nhật' : 'Thêm'}
         cancelText="Hủy"
       >
-        <Form form={form} layout="vertical" name="productForm">
+        <Form
+          form={form}
+          layout="vertical"
+          name="productForm"
+        >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên sản phẩm!" },
-                ]}
+                rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm!' }]}
               >
                 <Input />
               </Form.Item>
@@ -398,22 +380,22 @@ const ProductManagement = () => {
               <Form.Item
                 name="sku"
                 label="SKU"
-                rules={[{ required: true, message: "Vui lòng nhập SKU!" }]}
+                rules={[{ required: true, message: 'Vui lòng nhập SKU!' }]}
               >
                 <Input />
               </Form.Item>
             </Col>
           </Row>
-
+          
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="categoryId"
                 label="Danh mục"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
+                rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
               >
                 <Select placeholder="Chọn danh mục">
-                  {mockCategories.map((category) => (
+                  {mockCategories.map(category => (
                     <Option key={category.id} value={category.id}>
                       {category.name}
                     </Option>
@@ -425,9 +407,7 @@ const ProductManagement = () => {
               <Form.Item
                 name="status"
                 label="Trạng thái"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
-                ]}
+                rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
               >
                 <Select>
                   <Option value="active">Hoạt động</Option>
@@ -442,15 +422,13 @@ const ProductManagement = () => {
               <Form.Item
                 name="price"
                 label="Giá bán"
-                rules={[{ required: true, message: "Vui lòng nhập giá bán!" }]}
+                rules={[{ required: true, message: 'Vui lòng nhập giá bán!' }]}
               >
                 <InputNumber
-                  style={{ width: "100%" }}
+                  style={{ width: '100%' }}
                   min={0}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
                   addonAfter="VNĐ"
                 />
               </Form.Item>
@@ -459,15 +437,13 @@ const ProductManagement = () => {
               <Form.Item
                 name="costPrice"
                 label="Giá vốn"
-                rules={[{ required: true, message: "Vui lòng nhập giá vốn!" }]}
+                rules={[{ required: true, message: 'Vui lòng nhập giá vốn!' }]}
               >
                 <InputNumber
-                  style={{ width: "100%" }}
+                  style={{ width: '100%' }}
                   min={0}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
                   addonAfter="VNĐ"
                 />
               </Form.Item>
@@ -476,9 +452,12 @@ const ProductManagement = () => {
               <Form.Item
                 name="stock"
                 label="Số lượng tồn kho"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng!" }]}
+                rules={[{ required: true, message: 'Vui lòng nhập số lượng!' }]}
               >
-                <InputNumber style={{ width: "100%" }} min={0} />
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -486,18 +465,25 @@ const ProductManagement = () => {
           <Form.Item
             name="minStock"
             label="Số lượng tối thiểu"
-            rules={[
-              { required: true, message: "Vui lòng nhập số lượng tối thiểu!" },
-            ]}
+            rules={[{ required: true, message: 'Vui lòng nhập số lượng tối thiểu!' }]}
           >
-            <InputNumber style={{ width: "100%" }} min={0} />
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+            />
           </Form.Item>
 
-          <Form.Item name="description" label="Mô tả">
+          <Form.Item
+            name="description"
+            label="Mô tả"
+          >
             <TextArea rows={4} />
           </Form.Item>
 
-          <Form.Item name="images" label="Hình ảnh">
+          <Form.Item
+            name="images"
+            label="Hình ảnh"
+          >
             <Upload
               listType="picture-card"
               beforeUpload={() => false}

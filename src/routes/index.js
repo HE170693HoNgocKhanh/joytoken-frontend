@@ -80,4 +80,41 @@ export const routes = [
     page: NotFoundPage,
     isShowHeader: true,
   },
+  // Admin Routes
+  
+  {
+    path: "/admin/dashboard",
+    page: Dashboard,
+    isShowHeader: false,
+    isAdminRoute: true
+  },
+  {
+    path: "/admin/users",
+    page: UserManagement,
+    isShowHeader: false,
+    isAdminRoute: true
+  },
+  {
+    path: "/admin/products",
+    page: ProductManagement,
+    isShowHeader: false,
+    isAdminRoute: true
+  },
+  {
+    path: "/admin/categories",
+    page: CategoryManagement,
+    isShowHeader: false,
+    isAdminRoute: true
+  },
+  {
+    path: "/admin/inventory",
+    page: InventoryManagement,
+    isShowHeader: false,
+    isAdminRoute: true
+  },
+  {
+    path: "*",
+    page: NotFoundPage,
+    isShowHeader: true
+  },
 ];

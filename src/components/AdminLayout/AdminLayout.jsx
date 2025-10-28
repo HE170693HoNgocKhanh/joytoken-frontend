@@ -1,13 +1,5 @@
-import React, { useState } from "react";
-import {
-  Layout,
-  Menu,
-  Avatar,
-  Dropdown,
-  Space,
-  Typography,
-  Button,
-} from "antd";
+import React, { useState } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Space, Typography, Button } from 'antd';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -18,9 +10,9 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
-} from "@ant-design/icons";
-import { useNavigate, useLocation } from "react-router-dom";
-import styled from "styled-components";
+} from '@ant-design/icons';
+import { useNavigate, useLocation } from 'react-router-dom';
+import styled from 'styled-components';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -75,29 +67,29 @@ const AdminLayout = ({ children }) => {
 
   const menuItems = [
     {
-      key: "/admin/dashboard",
+      key: '/admin/dashboard',
       icon: <DashboardOutlined />,
-      label: "Dashboard",
+      label: 'Dashboard',
     },
     {
-      key: "/admin/users",
+      key: '/admin/users',
       icon: <UserOutlined />,
-      label: "Quản lý User",
+      label: 'Quản lý User',
     },
     {
-      key: "/admin/products",
+      key: '/admin/products',
       icon: <ShoppingOutlined />,
-      label: "Quản lý Sản phẩm",
+      label: 'Quản lý Sản phẩm',
     },
     {
-      key: "/admin/categories",
+      key: '/admin/categories',
       icon: <AppstoreOutlined />,
-      label: "Quản lý Danh mục",
+      label: 'Quản lý Danh mục',
     },
     {
-      key: "/admin/inventory",
+      key: '/admin/inventory',
       icon: <BarChartOutlined />,
-      label: "Quản lý Kho",
+      label: 'Quản lý Kho',
     },
   ];
 
@@ -107,19 +99,19 @@ const AdminLayout = ({ children }) => {
 
   const handleLogout = () => {
     // Implement logout logic here
-    navigate("/login");
+    navigate('/login');
   };
 
   const userMenuItems = [
     {
-      key: "profile",
+      key: 'profile',
       icon: <UserOutlined />,
-      label: "Thông tin cá nhân",
+      label: 'Thông tin cá nhân',
     },
     {
-      key: "logout",
+      key: 'logout',
       icon: <LogoutOutlined />,
-      label: "Đăng xuất",
+      label: 'Đăng xuất',
       onClick: handleLogout,
     },
   ];
@@ -128,7 +120,9 @@ const AdminLayout = ({ children }) => {
     <StyledLayout>
       <StyledSider trigger={null} collapsible collapsed={collapsed}>
         <LogoContainer>
-          <LogoText level={4}>{collapsed ? "JT" : "JoyToken Admin"}</LogoText>
+          <LogoText level={4}>
+            {collapsed ? 'JT' : 'JoyToken Admin'}
+          </LogoText>
         </LogoContainer>
         <Menu
           theme="dark"
@@ -138,7 +132,7 @@ const AdminLayout = ({ children }) => {
           onClick={handleMenuClick}
         />
       </StyledSider>
-
+      
       <Layout>
         <StyledHeader>
           <Space>
@@ -146,25 +140,27 @@ const AdminLayout = ({ children }) => {
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: "16px", width: 64, height: 64 }}
+              style={{ fontSize: '16px', width: 64, height: 64 }}
             />
             <Title level={4} style={{ margin: 0 }}>
               Admin Panel
             </Title>
           </Space>
-
+          
           <Space size="middle">
             <Button type="text" icon={<BellOutlined />} />
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-              <Space style={{ cursor: "pointer" }}>
+              <Space style={{ cursor: 'pointer' }}>
                 <Avatar icon={<UserOutlined />} />
                 <span>Admin User</span>
               </Space>
             </Dropdown>
           </Space>
         </StyledHeader>
-
-        <StyledContent>{children}</StyledContent>
+        
+        <StyledContent>
+          {children}
+        </StyledContent>
       </Layout>
     </StyledLayout>
   );

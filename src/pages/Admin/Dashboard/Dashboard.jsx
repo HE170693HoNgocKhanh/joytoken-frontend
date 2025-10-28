@@ -1,16 +1,5 @@
-import React from "react";
-import {
-  Row,
-  Col,
-  Card,
-  Statistic,
-  Table,
-  Tag,
-  Typography,
-  Progress,
-  List,
-  Avatar,
-} from "antd";
+import React from 'react';
+import { Row, Col, Card, Statistic, Table, Tag, Typography, Progress, List, Avatar } from 'antd';
 import {
   UserOutlined,
   ShoppingOutlined,
@@ -19,9 +8,9 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   WarningOutlined,
-} from "@ant-design/icons";
-import styled from "styled-components";
-import { mockDashboardStats } from "../../../data/mockData";
+} from '@ant-design/icons';
+import styled from 'styled-components';
+import { mockDashboardStats } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 
@@ -51,61 +40,61 @@ const AlertCard = styled(Card)`
 
 const Dashboard = () => {
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
     }).format(amount);
   };
 
   const orderColumns = [
     {
-      title: "Mã đơn",
-      dataIndex: "id",
-      key: "id",
-      render: (id) => `#${id.toString().padStart(6, "0")}`,
+      title: 'Mã đơn',
+      dataIndex: 'id',
+      key: 'id',
+      render: (id) => `#${id.toString().padStart(6, '0')}`,
     },
     {
-      title: "Khách hàng",
-      dataIndex: "customerName",
-      key: "customerName",
+      title: 'Khách hàng',
+      dataIndex: 'customerName',
+      key: 'customerName',
     },
     {
-      title: "Tổng tiền",
-      dataIndex: "total",
-      key: "total",
+      title: 'Tổng tiền',
+      dataIndex: 'total',
+      key: 'total',
       render: (total) => formatCurrency(total),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       render: (status) => {
         const colors = {
-          completed: "green",
-          processing: "blue",
-          shipped: "orange",
-          cancelled: "red",
+          completed: 'green',
+          processing: 'blue',
+          shipped: 'orange',
+          cancelled: 'red',
         };
         const labels = {
-          completed: "Hoàn thành",
-          processing: "Đang xử lý",
-          shipped: "Đã gửi",
-          cancelled: "Đã hủy",
+          completed: 'Hoàn thành',
+          processing: 'Đang xử lý',
+          shipped: 'Đã gửi',
+          cancelled: 'Đã hủy',
         };
         return <Tag color={colors[status]}>{labels[status]}</Tag>;
       },
     },
     {
-      title: "Ngày",
-      dataIndex: "date",
-      key: "date",
+      title: 'Ngày',
+      dataIndex: 'date',
+      key: 'date',
     },
   ];
 
   return (
     <div>
       <Title level={2}>Dashboard</Title>
-
+      
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -114,7 +103,7 @@ const Dashboard = () => {
               title="Tổng Users"
               value={mockDashboardStats.totalUsers}
               prefix={<UserOutlined />}
-              valueStyle={{ color: "#3f8600" }}
+              valueStyle={{ color: '#3f8600' }}
               suffix={<ArrowUpOutlined />}
             />
           </StatCard>
@@ -125,7 +114,7 @@ const Dashboard = () => {
               title="Tổng Sản phẩm"
               value={mockDashboardStats.totalProducts}
               prefix={<ShoppingOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{ color: '#1890ff' }}
             />
           </StatCard>
         </Col>
@@ -135,7 +124,7 @@ const Dashboard = () => {
               title="Danh mục"
               value={mockDashboardStats.totalCategories}
               prefix={<AppstoreOutlined />}
-              valueStyle={{ color: "#722ed1" }}
+              valueStyle={{ color: '#722ed1' }}
             />
           </StatCard>
         </Col>
@@ -146,7 +135,7 @@ const Dashboard = () => {
               value={mockDashboardStats.totalRevenue}
               prefix={<DollarOutlined />}
               formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: "#cf1322" }}
+              valueStyle={{ color: '#cf1322' }}
               suffix={<ArrowUpOutlined />}
             />
           </StatCard>
@@ -164,7 +153,7 @@ const Dashboard = () => {
                 <List.Item>
                   <List.Item.Meta
                     avatar={
-                      <Avatar style={{ backgroundColor: "#1890ff" }}>
+                      <Avatar style={{ backgroundColor: '#1890ff' }}>
                         {index + 1}
                       </Avatar>
                     }
@@ -185,13 +174,13 @@ const Dashboard = () => {
 
         {/* Low Stock Alerts */}
         <Col xs={24} lg={12}>
-          <AlertCard
+          <AlertCard 
             title={
               <span>
-                <WarningOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
+                <WarningOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
                 Cảnh báo tồn kho thấp
               </span>
-            }
+            } 
             size="small"
           >
             <List
@@ -206,15 +195,10 @@ const Dashboard = () => {
                         <Progress
                           percent={(item.currentStock / item.minStock) * 100}
                           size="small"
-                          status={
-                            item.currentStock <= item.minStock
-                              ? "exception"
-                              : "normal"
-                          }
+                          status={item.currentStock <= item.minStock ? 'exception' : 'normal'}
                         />
                         <Text>
-                          Còn lại: {item.currentStock} / Tối thiểu:{" "}
-                          {item.minStock}
+                          Còn lại: {item.currentStock} / Tối thiểu: {item.minStock}
                         </Text>
                       </div>
                     }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Table,
   Card,
@@ -18,7 +18,7 @@ import {
   Progress,
   Alert,
   Tabs,
-} from "antd";
+} from 'antd';
 import {
   BarChartOutlined,
   PlusOutlined,
@@ -28,9 +28,9 @@ import {
   SyncOutlined,
   InboxOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
-import styled from "styled-components";
-import { mockInventory, mockProducts } from "../../../data/mockData";
+} from '@ant-design/icons';
+import styled from 'styled-components';
+import { mockInventory, mockProducts } from '../../../data/mockData';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -57,32 +57,31 @@ const AlertCard = styled(Card)`
 const InventoryManagement = () => {
   const [inventory, setInventory] = useState(mockInventory);
   const [isStockModalVisible, setIsStockModalVisible] = useState(false);
-  const [stockAction, setStockAction] = useState("in"); // 'in' or 'out'
+  const [stockAction, setStockAction] = useState('in'); // 'in' or 'out'
   const [selectedItem, setSelectedItem] = useState(null);
   const [form] = Form.useForm();
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
-  const filteredInventory = inventory.filter(
-    (item) =>
-      item.productName.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchText.toLowerCase())
+  const filteredInventory = inventory.filter(item =>
+    item.productName.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const inventoryStats = {
     totalItems: inventory.length,
-    inStock: inventory.filter((i) => i.status === "in_stock").length,
-    lowStock: inventory.filter((i) => i.status === "low_stock").length,
-    outOfStock: inventory.filter((i) => i.status === "out_of_stock").length,
+    inStock: inventory.filter(i => i.status === 'in_stock').length,
+    lowStock: inventory.filter(i => i.status === 'low_stock').length,
+    outOfStock: inventory.filter(i => i.status === 'out_of_stock').length,
     totalValue: inventory.reduce((sum, item) => {
-      const product = mockProducts.find((p) => p.id === item.productId);
+      const product = mockProducts.find(p => p.id === item.productId);
       return sum + (product ? product.price * item.currentStock : 0);
     }, 0),
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
     }).format(amount);
   };
 
@@ -103,84 +102,70 @@ const InventoryManagement = () => {
     try {
       const values = await form.validateFields();
       const { quantity, reason } = values;
-
-      setInventory(
-        inventory.map((item) => {
-          if (item.id === selectedItem.id) {
-            const newStock =
-              stockAction === "in"
-                ? item.currentStock + quantity
-                : Math.max(0, item.currentStock - quantity);
-
-            const newAvailableStock = newStock - item.reservedStock;
-
-            let newStatus = "in_stock";
-            if (newStock === 0) {
-              newStatus = "out_of_stock";
-            } else if (newStock <= item.minStock) {
-              newStatus = "low_stock";
-            }
-
-            return {
-              ...item,
-              currentStock: newStock,
-              availableStock: newAvailableStock,
-              status: newStatus,
-              lastRestocked:
-                stockAction === "in"
-                  ? new Date().toISOString().split("T")[0]
-                  : item.lastRestocked,
-            };
+      
+      setInventory(inventory.map(item => {
+        if (item.id === selectedItem.id) {
+          const newStock = stockAction === 'in' 
+            ? item.currentStock + quantity 
+            : Math.max(0, item.currentStock - quantity);
+          
+          const newAvailableStock = newStock - item.reservedStock;
+          
+          let newStatus = 'in_stock';
+          if (newStock === 0) {
+            newStatus = 'out_of_stock';
+          } else if (newStock <= item.minStock) {
+            newStatus = 'low_stock';
           }
-          return item;
-        })
-      );
-
+          
+          return {
+            ...item,
+            currentStock: newStock,
+            availableStock: newAvailableStock,
+            status: newStatus,
+            lastRestocked: stockAction === 'in' ? new Date().toISOString().split('T')[0] : item.lastRestocked,
+          };
+        }
+        return item;
+      }));
+      
       message.success(
-        stockAction === "in"
-          ? `Đã nhập kho ${quantity} sản phẩm`
+        stockAction === 'in' 
+          ? `Đã nhập kho ${quantity} sản phẩm` 
           : `Đã xuất kho ${quantity} sản phẩm`
       );
-
+      
       setIsStockModalVisible(false);
       setSelectedItem(null);
       form.resetFields();
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error('Validation failed:', error);
     }
   };
 
   const getStockStatusColor = (status) => {
     switch (status) {
-      case "in_stock":
-        return "green";
-      case "low_stock":
-        return "orange";
-      case "out_of_stock":
-        return "red";
-      default:
-        return "default";
+      case 'in_stock': return 'green';
+      case 'low_stock': return 'orange';
+      case 'out_of_stock': return 'red';
+      default: return 'default';
     }
   };
 
   const getStockStatusText = (status) => {
     switch (status) {
-      case "in_stock":
-        return "Còn hàng";
-      case "low_stock":
-        return "Sắp hết";
-      case "out_of_stock":
-        return "Hết hàng";
-      default:
-        return "Không xác định";
+      case 'in_stock': return 'Còn hàng';
+      case 'low_stock': return 'Sắp hết';
+      case 'out_of_stock': return 'Hết hàng';
+      default: return 'Không xác định';
     }
   };
 
   const columns = [
     {
-      title: "Sản phẩm",
-      dataIndex: "productName",
-      key: "productName",
+      title: 'Sản phẩm',
+      dataIndex: 'productName',
+      key: 'productName',
       sorter: (a, b) => a.productName.localeCompare(b.productName),
       render: (text, record) => (
         <div>
@@ -192,19 +177,17 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: "Tồn kho hiện tại",
-      dataIndex: "currentStock",
-      key: "currentStock",
+      title: 'Tồn kho hiện tại',
+      dataIndex: 'currentStock',
+      key: 'currentStock',
       sorter: (a, b) => a.currentStock - b.currentStock,
       render: (stock, record) => (
         <div>
-          <Text strong style={{ fontSize: 16 }}>
-            {stock}
-          </Text>
+          <Text strong style={{ fontSize: 16 }}>{stock}</Text>
           <Progress
             percent={(stock / record.maxStock) * 100}
             size="small"
-            status={stock <= record.minStock ? "exception" : "normal"}
+            status={stock <= record.minStock ? 'exception' : 'normal'}
             showInfo={false}
             style={{ marginTop: 4 }}
           />
@@ -212,9 +195,9 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: "Có thể bán",
-      dataIndex: "availableStock",
-      key: "availableStock",
+      title: 'Có thể bán',
+      dataIndex: 'availableStock',
+      key: 'availableStock',
       render: (available, record) => (
         <div>
           <div>{available}</div>
@@ -227,33 +210,33 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: "Tối thiểu",
-      dataIndex: "minStock",
-      key: "minStock",
+      title: 'Tối thiểu',
+      dataIndex: 'minStock',
+      key: 'minStock',
     },
     {
-      title: "Tối đa",
-      dataIndex: "maxStock",
-      key: "maxStock",
+      title: 'Tối đa',
+      dataIndex: 'maxStock',
+      key: 'maxStock',
     },
     {
-      title: "Vị trí",
-      dataIndex: "location",
-      key: "location",
+      title: 'Vị trí',
+      dataIndex: 'location',
+      key: 'location',
     },
     {
-      title: "Nhà cung cấp",
-      dataIndex: "supplier",
-      key: "supplier",
+      title: 'Nhà cung cấp',
+      dataIndex: 'supplier',
+      key: 'supplier',
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       filters: [
-        { text: "Còn hàng", value: "in_stock" },
-        { text: "Sắp hết", value: "low_stock" },
-        { text: "Hết hàng", value: "out_of_stock" },
+        { text: 'Còn hàng', value: 'in_stock' },
+        { text: 'Sắp hết', value: 'low_stock' },
+        { text: 'Hết hàng', value: 'out_of_stock' },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status) => (
@@ -263,14 +246,14 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: "Nhập kho cuối",
-      dataIndex: "lastRestocked",
-      key: "lastRestocked",
+      title: 'Nhập kho cuối',
+      dataIndex: 'lastRestocked',
+      key: 'lastRestocked',
       sorter: (a, b) => new Date(a.lastRestocked) - new Date(b.lastRestocked),
     },
     {
-      title: "Thao tác",
-      key: "action",
+      title: 'Thao tác',
+      key: 'action',
       width: 150,
       render: (_, record) => (
         <Space>
@@ -278,13 +261,13 @@ const InventoryManagement = () => {
             type="primary"
             size="small"
             icon={<PlusOutlined />}
-            onClick={() => showStockModal(record, "in")}
+            onClick={() => showStockModal(record, 'in')}
             title="Nhập kho"
           />
           <Button
             size="small"
             icon={<MinusOutlined />}
-            onClick={() => showStockModal(record, "out")}
+            onClick={() => showStockModal(record, 'out')}
             title="Xuất kho"
             disabled={record.availableStock === 0}
           />
@@ -293,9 +276,7 @@ const InventoryManagement = () => {
     },
   ];
 
-  const lowStockItems = inventory.filter(
-    (item) => item.status === "low_stock" || item.status === "out_of_stock"
-  );
+  const lowStockItems = inventory.filter(item => item.status === 'low_stock' || item.status === 'out_of_stock');
 
   return (
     <div>
@@ -313,7 +294,7 @@ const InventoryManagement = () => {
               message={`Cảnh báo: Có ${lowStockItems.length} sản phẩm sắp hết hoặc đã hết hàng`}
               description={
                 <div>
-                  {lowStockItems.slice(0, 3).map((item) => (
+                  {lowStockItems.slice(0, 3).map(item => (
                     <div key={item.id}>
                       {item.productName}: {item.currentStock}/{item.minStock}
                     </div>
@@ -337,7 +318,7 @@ const InventoryManagement = () => {
               title="Tổng mặt hàng"
               value={inventoryStats.totalItems}
               prefix={<InboxOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{ color: '#1890ff' }}
             />
           </StatCard>
         </Col>
@@ -347,7 +328,7 @@ const InventoryManagement = () => {
               title="Còn hàng"
               value={inventoryStats.inStock}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#3f8600" }}
+              valueStyle={{ color: '#3f8600' }}
             />
           </StatCard>
         </Col>
@@ -357,7 +338,7 @@ const InventoryManagement = () => {
               title="Sắp hết"
               value={inventoryStats.lowStock}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: "#fa8c16" }}
+              valueStyle={{ color: '#fa8c16' }}
             />
           </StatCard>
         </Col>
@@ -367,7 +348,7 @@ const InventoryManagement = () => {
               title="Giá trị kho"
               value={inventoryStats.totalValue}
               formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: "#722ed1" }}
+              valueStyle={{ color: '#722ed1' }}
             />
           </StatCard>
         </Col>
@@ -376,13 +357,7 @@ const InventoryManagement = () => {
       <Tabs defaultActiveKey="1">
         <TabPane tab="Danh sách tồn kho" key="1">
           <StyledCard>
-            <div
-              style={{
-                marginBottom: 16,
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
               <Space>
                 <Input.Search
                   placeholder="Tìm kiếm theo tên hoặc SKU"
@@ -410,9 +385,9 @@ const InventoryManagement = () => {
                   `${range[0]}-${range[1]} của ${total} mặt hàng`,
               }}
               rowClassName={(record) => {
-                if (record.status === "out_of_stock") return "row-out-of-stock";
-                if (record.status === "low_stock") return "row-low-stock";
-                return "";
+                if (record.status === 'out_of_stock') return 'row-out-of-stock';
+                if (record.status === 'low_stock') return 'row-low-stock';
+                return '';
               }}
             />
           </StyledCard>
@@ -421,15 +396,8 @@ const InventoryManagement = () => {
         <TabPane tab="Cảnh báo tồn kho" key="2">
           <AlertCard title="Sản phẩm cần bổ sung">
             <Table
-              columns={columns.filter((col) =>
-                [
-                  "productName",
-                  "currentStock",
-                  "minStock",
-                  "supplier",
-                  "status",
-                  "action",
-                ].includes(col.key)
+              columns={columns.filter(col => 
+                ['productName', 'currentStock', 'minStock', 'supplier', 'status', 'action'].includes(col.key)
               )}
               dataSource={lowStockItems}
               rowKey="id"
@@ -443,14 +411,14 @@ const InventoryManagement = () => {
       {/* Stock Modal */}
       <Modal
         title={
-          stockAction === "in"
-            ? `Nhập kho - ${selectedItem?.productName}`
+          stockAction === 'in' 
+            ? `Nhập kho - ${selectedItem?.productName}` 
             : `Xuất kho - ${selectedItem?.productName}`
         }
         open={isStockModalVisible}
         onOk={handleStockSubmit}
         onCancel={handleStockCancel}
-        okText={stockAction === "in" ? "Nhập kho" : "Xuất kho"}
+        okText={stockAction === 'in' ? 'Nhập kho' : 'Xuất kho'}
         cancelText="Hủy"
       >
         {selectedItem && (
@@ -459,44 +427,42 @@ const InventoryManagement = () => {
             <Text>{selectedItem.currentStock}</Text>
           </div>
         )}
-
-        <Form form={form} layout="vertical" name="stockForm">
+        
+        <Form
+          form={form}
+          layout="vertical"
+          name="stockForm"
+        >
           <Form.Item
             name="quantity"
             label="Số lượng"
             rules={[
-              { required: true, message: "Vui lòng nhập số lượng!" },
-              { type: "number", min: 1, message: "Số lượng phải lớn hơn 0!" },
-              stockAction === "out" && {
+              { required: true, message: 'Vui lòng nhập số lượng!' },
+              { type: 'number', min: 1, message: 'Số lượng phải lớn hơn 0!' },
+              stockAction === 'out' && {
                 validator: (_, value) => {
                   if (value > selectedItem?.availableStock) {
-                    return Promise.reject(
-                      new Error(
-                        `Số lượng không được vượt quá ${selectedItem?.availableStock}`
-                      )
-                    );
+                    return Promise.reject(new Error(`Số lượng không được vượt quá ${selectedItem?.availableStock}`));
                   }
                   return Promise.resolve();
-                },
-              },
+                }
+              }
             ].filter(Boolean)}
           >
             <InputNumber
-              style={{ width: "100%" }}
+              style={{ width: '100%' }}
               min={1}
-              max={
-                stockAction === "out" ? selectedItem?.availableStock : undefined
-              }
+              max={stockAction === 'out' ? selectedItem?.availableStock : undefined}
             />
           </Form.Item>
 
           <Form.Item
             name="reason"
             label="Lý do"
-            rules={[{ required: true, message: "Vui lòng nhập lý do!" }]}
+            rules={[{ required: true, message: 'Vui lòng nhập lý do!' }]}
           >
             <Select placeholder="Chọn lý do">
-              {stockAction === "in" ? (
+              {stockAction === 'in' ? (
                 <>
                   <Option value="purchase">Nhập hàng từ nhà cung cấp</Option>
                   <Option value="return">Trả hàng từ khách hàng</Option>
