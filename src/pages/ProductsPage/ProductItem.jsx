@@ -1,13 +1,24 @@
 import { Link } from "react-router-dom";
 import { FaStar } from "react-icons/fa";
-import { Card, ProductImage, ProductName, ProductPrice, Label, Rating, AddButton } from "./style";
+import {
+  Card,
+  ProductImage,
+  ProductName,
+  ProductPrice,
+  Label,
+  Rating,
+  AddButton,
+} from "./style";
 
 const ProductItem = ({ product, onAddToCart }) => {
   return (
     <Card>
       {product.label && <Label>{product.label}</Label>}
 
-      <Link to={`/product/${product.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+      <Link
+        to={`/product/${product._id}`}
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
         <ProductImage src={product.image} alt={product.name} />
         <ProductName>{product.name}</ProductName>
         <ProductPrice>€{product.price.toFixed(2)}</ProductPrice>
