@@ -8,9 +8,6 @@ import {
   ControlsRow,
   LeftControls,
   RightControls,
-  BulkApplyBox,
-  SmallInput,
-  ApplyButton,
   DeleteButton,
   FooterBar,
   FooterLeft,
@@ -23,23 +20,11 @@ const CartPage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
-  const [bulk, setBulk] = useState({
-    name: "",
-    color: "#000000",
-    font: "Arial",
-    image: null,
-  });
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("cart") || "[]");
-    const normalized = saved.map((p) => ({
-      ...p,
-      selected: false,
-      qty: p.qty && p.qty > 0 ? p.qty : 1,
-    }));
-    setCart(normalized);
+    setCart(saved);
   }, []);
-  console.log("cart", cart);
 
   useEffect(() => {
     if (cart.length === 0) setSelectAll(false);
@@ -48,8 +33,7 @@ const CartPage = () => {
 
   const persist = (next) => {
     setCart(next);
-    const toStore = next.map(({ selected, ...rest }) => rest);
-    localStorage.setItem("cart", JSON.stringify(toStore));
+    localStorage.setItem("cart", JSON.stringify(next));
   };
 
   const toggleSelectAll = () => {
@@ -67,18 +51,67 @@ const CartPage = () => {
 
   const updateQty = (id, qty) => {
     const next = cart.map((i) =>
-      i.id === id ? { ...i, qty: Math.max(1, qty) } : i
+      i.id === id ? { ...i, quantity: Math.max(1, qty) } : i
     );
     persist(next);
   };
 
-  const updateVariant = (id, variant) => {
-    const next = cart.map((i) => (i.id === id ? { ...i, variant } : i));
-    persist(next);
+  // ✅ Đã fix chuẩn theo logic bạn yêu cầu
+  const updateVariant = (productId, newVariantName) => {
+    const nextCart = [...cart];
+
+    const currentIndex = nextCart.findIndex((item) => item.id === productId);
+    if (currentIndex === -1) return;
+
+    const currentItem = nextCart[currentIndex];
+
+    const newVariant = currentItem.variants.find(
+      (v) => v.name === newVariantName
+    );
+    if (!newVariant) return;
+
+    // Kiểm tra có sản phẩm khác cùng id & cùng variant chưa
+    const duplicateIndex = nextCart.findIndex(
+      (item, idx) =>
+        idx !== currentIndex &&
+        item.id === productId &&
+        item.selectedVariant?._id === newVariant._id
+    );
+
+    if (duplicateIndex !== -1) {
+      // Gộp quantity
+      const duplicateItem = nextCart[duplicateIndex];
+      const mergedQty =
+        (duplicateItem.quantity || 1) + (currentItem.quantity || 1);
+
+      const mergedItem = {
+        ...duplicateItem,
+        quantity: mergedQty,
+        selectedVariant: newVariant,
+        image: newVariant.image || duplicateItem.image,
+      };
+
+      const updatedCart = nextCart.filter(
+        (_, idx) => idx !== currentIndex && idx !== duplicateIndex
+      );
+      updatedCart.push(mergedItem);
+
+      persist(updatedCart);
+    } else {
+      nextCart[currentIndex] = {
+        ...currentItem,
+        selectedVariant: newVariant,
+        image: newVariant.image || currentItem.image,
+      };
+      persist(nextCart);
+    }
   };
 
-  const removeItem = (id) => {
-    const next = cart.filter((i) => i.id !== id);
+  const removeItem = (productId, variantId) => {
+    const next = cart.filter(
+      (item) =>
+        !(item.id === productId && item.selectedVariant?._id === variantId)
+    );
     persist(next);
   };
 
@@ -89,7 +122,7 @@ const CartPage = () => {
 
   const total = cart
     .filter((i) => i.selected)
-    .reduce((s, i) => s + (i.price || 0) * (i.qty || 1), 0);
+    .reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
 
   if (!cart || cart.length === 0)
     return (
@@ -135,12 +168,13 @@ const CartPage = () => {
       <CartTable>
         {cart.map((item) => (
           <CartItem
-            key={item.id}
+            key={item.id + (item.selectedVariant?._id || "")}
             item={item}
+            cart={cart} // ✅ truyền thêm cart xuống
             onToggle={() => toggleSelectItem(item.id)}
             onQtyChange={(q) => updateQty(item.id, q)}
             onVariantChange={(v) => updateVariant(item.id, v)}
-            onRemove={() => removeItem(item.id)}
+            onRemove={() => removeItem(item.id, item.selectedVariant?._id)}
           />
         ))}
       </CartTable>
