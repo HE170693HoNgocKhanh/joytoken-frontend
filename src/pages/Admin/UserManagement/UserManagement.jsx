@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   Card,
@@ -16,6 +16,7 @@ import {
   Row,
   Col,
   Statistic,
+  Spin,
 } from 'antd';
 import {
   UserOutlined,
@@ -26,7 +27,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { mockUsers } from '../../../data/mockData';
+import { userService } from '../../../services/userService'; 
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -46,22 +47,43 @@ const StatCard = styled(Card)`
 `;
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchText.toLowerCase())
+  // 📦 Lấy danh sách users từ API
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await userService.getAllUsers();
+      console.log("📦 Lấy danh sách users từ API", res);
+      setUsers(res?.data || res || []);
+    } catch (err) {
+      message.error('Không thể tải danh sách người dùng');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const userStats = {
     total: users.length,
-    active: users.filter(u => u.status === 'active').length,
-    inactive: users.filter(u => u.status === 'inactive').length,
-    admins: users.filter(u => u.role === 'admin').length,
+    active: users.filter((u) => u.status === 'active').length,
+    inactive: users.filter((u) => u.status === 'inactive').length,
+    admins: users.filter((u) => u.role === 'admin').length,
   };
 
   const showModal = (user = null) => {
@@ -80,42 +102,39 @@ const UserManagement = () => {
     form.resetFields();
   };
 
+  // 🟢 Tạo hoặc cập nhật user
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingUser) {
-        // Update user
-        setUsers(users.map(user => 
-          user.id === editingUser.id 
-            ? { ...user, ...values, updatedAt: new Date().toISOString().split('T')[0] }
-            : user
-        ));
-        message.success('Cập nhật thông tin user thành công');
+        // Cập nhật
+        await userService.updateUser(editingUser.id, values);
+        message.success('Cập nhật người dùng thành công');
       } else {
-        // Add new user
-        const newUser = {
-          id: Math.max(...users.map(u => u.id)) + 1,
-          ...values,
-          createdAt: new Date().toISOString().split('T')[0],
-          lastLogin: null,
-          avatar: null,
-        };
-        setUsers([...users, newUser]);
-        message.success('Thêm user mới thành công');
+        // Tạo mới
+        await userService.createUser(values);
+        message.success('Thêm người dùng mới thành công');
       }
-      
-      setIsModalVisible(false);
-      setEditingUser(null);
-      form.resetFields();
-    } catch (error) {
-      console.error('Validation failed:', error);
+
+      handleCancel();
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      message.error('Thao tác thất bại');
     }
   };
 
-  const handleDelete = (userId) => {
-    setUsers(users.filter(user => user.id !== userId));
-    message.success('Xóa user thành công');
+  // 🔴 Xóa user
+  const handleDelete = async (userId) => {
+    try {
+      await userService.deleteUser(userId);
+      message.success('Xóa người dùng thành công');
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      message.error('Không thể xóa người dùng');
+    }
   };
 
   const columns = [
@@ -125,13 +144,13 @@ const UserManagement = () => {
       key: 'avatar',
       width: 80,
       render: (avatar, record) => (
-        <Avatar 
-          size="large" 
-          icon={<UserOutlined />} 
+        <Avatar
+          size="large"
+          icon={<UserOutlined />}
           src={avatar}
           style={{ backgroundColor: '#1890ff' }}
         >
-          {record.name.charAt(0).toUpperCase()}
+          {record.name?.charAt(0).toUpperCase()}
         </Avatar>
       ),
     },
@@ -185,7 +204,6 @@ const UserManagement = () => {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
       title: 'Đăng nhập cuối',
@@ -235,38 +253,22 @@ const UserManagement = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic
-              title="Tổng Users"
-              value={userStats.total}
-              valueStyle={{ color: '#1890ff' }}
-            />
+            <Statistic title="Tổng Users" value={userStats.total} valueStyle={{ color: '#1890ff' }} />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic
-              title="Đang hoạt động"
-              value={userStats.active}
-              valueStyle={{ color: '#3f8600' }}
-            />
+            <Statistic title="Đang hoạt động" value={userStats.active} valueStyle={{ color: '#3f8600' }} />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic
-              title="Không hoạt động"
-              value={userStats.inactive}
-              valueStyle={{ color: '#cf1322' }}
-            />
+            <Statistic title="Không hoạt động" value={userStats.inactive} valueStyle={{ color: '#cf1322' }} />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic
-              title="Admins"
-              value={userStats.admins}
-              valueStyle={{ color: '#722ed1' }}
-            />
+            <Statistic title="Admins" value={userStats.admins} valueStyle={{ color: '#722ed1' }} />
           </StatCard>
         </Col>
       </Row>
@@ -284,24 +286,25 @@ const UserManagement = () => {
           </Space>
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Excel</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+            {/* <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
               Thêm User
-            </Button>
+            </Button> */}
           </Space>
         </div>
 
-        <Table
-          columns={columns}
-          dataSource={filteredUsers}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} user`,
-          }}
-        />
+        <Spin spinning={loading}>
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} user`,
+            }}
+          />
+        </Spin>
       </StyledCard>
 
       <Modal
@@ -313,18 +316,10 @@ const UserManagement = () => {
         okText={editingUser ? 'Cập nhật' : 'Thêm'}
         cancelText="Hủy"
       >
-        <Form
-          form={form}
-          layout="vertical"
-          name="userForm"
-        >
+        <Form form={form} layout="vertical" name="userForm">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="name"
-                label="Tên"
-                rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
-              >
+              <Form.Item name="name" label="Tên" rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}>
                 <Input />
               </Form.Item>
             </Col>
@@ -334,30 +329,22 @@ const UserManagement = () => {
                 label="Email"
                 rules={[
                   { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' }
+                  { type: 'email', message: 'Email không hợp lệ!' },
                 ]}
               >
                 <Input />
               </Form.Item>
             </Col>
           </Row>
-          
+
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="Số điện thoại"
-                rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
-              >
+              <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}>
                 <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="role"
-                label="Vai trò"
-                rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
-              >
+              <Form.Item name="role" label="Vai trò" rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}>
                 <Select>
                   <Option value="customer">Khách hàng</Option>
                   <Option value="admin">Admin</Option>
@@ -366,11 +353,7 @@ const UserManagement = () => {
             </Col>
           </Row>
 
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-          >
+          <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}>
             <Select>
               <Option value="active">Hoạt động</Option>
               <Option value="inactive">Không hoạt động</Option>

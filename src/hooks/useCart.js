@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { cartService } from '../services';
+// import { cartService } from '../services';
 
 export const useCart = () => {
   const [cart, setCart] = useState(null);
@@ -7,20 +7,20 @@ export const useCart = () => {
   const [itemCount, setItemCount] = useState(0);
 
   // Lấy giỏ hàng từ API
-  const fetchCart = async () => {
-    try {
-      setLoading(true);
-      const cartData = await cartService.getCart();
-      setCart(cartData);
-      setItemCount(cartData.items?.length || 0);
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-      setCart({ items: [], total: 0 });
-      setItemCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchCart = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const cartData = await cartService.getCart();
+  //     setCart(cartData);
+  //     setItemCount(cartData.items?.length || 0);
+  //   } catch (error) {
+  //     console.error('Error fetching cart:', error);
+  //     setCart({ items: [], total: 0 });
+  //     setItemCount(0);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   // Thêm sản phẩm vào giỏ hàng
   const addToCart = async (productId, quantity = 1, options = {}) => {

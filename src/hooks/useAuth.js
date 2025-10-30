@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { authService, getCurrentUser, isLoggedIn } from '../services';
+import { useState, useEffect } from "react";
+import { authService, getCurrentUser, isLoggedIn } from "../services";
 
 export const useAuth = () => {
   const [user, setUser] = useState(getCurrentUser());
@@ -31,20 +31,15 @@ export const useAuth = () => {
     try {
       setLoading(true);
       const response = await authService.login(credentials);
-      setUser(response.user);
-      setIsAuthenticated(true);
-      return response;
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
+      const { token, user } = response;
 
-  const register = async (userData) => {
-    try {
-      setLoading(true);
-      const response = await authService.register(userData);
+      // ✅ Lưu token và thông tin user vào localStorage
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      setUser(user);
+      setIsAuthenticated(true);
+
       return response;
     } catch (error) {
       throw error;
@@ -57,11 +52,26 @@ export const useAuth = () => {
     try {
       await authService.logout();
     } catch (error) {
-      // Vẫn đăng xuất local dù API lỗi
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
+      // ✅ Xoá localStorage khi logout
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
       setUser(null);
       setIsAuthenticated(false);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      const response = await authService.register(userData);
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,6 +92,6 @@ export const useAuth = () => {
     login,
     register,
     logout,
-    updateProfile
+    updateProfile,
   };
 };
