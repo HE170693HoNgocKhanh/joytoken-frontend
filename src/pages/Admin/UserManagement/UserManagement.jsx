@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Card,
@@ -17,7 +17,7 @@ import {
   Col,
   Statistic,
   Spin,
-} from 'antd';
+} from "antd";
 import {
   UserOutlined,
   EditOutlined,
@@ -25,9 +25,15 @@ import {
   PlusOutlined,
   ExportOutlined,
   SearchOutlined,
-} from '@ant-design/icons';
-import styled from 'styled-components';
-import { userService } from '../../../services/userService'; 
+} from "@ant-design/icons";
+import styled from "styled-components";
+import { userService } from "../../../services/userService";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -51,18 +57,18 @@ const UserManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(false);
 
   // 📦 Lấy danh sách users từ API
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await userService.getAllUsers();
+      const res = await userService.getAllUser();
       console.log("📦 Lấy danh sách users từ API", res);
       setUsers(res?.data || res || []);
     } catch (err) {
-      message.error('Không thể tải danh sách người dùng');
+      message.error("Không thể tải danh sách người dùng");
       console.error(err);
     } finally {
       setLoading(false);
@@ -81,9 +87,9 @@ const UserManagement = () => {
 
   const userStats = {
     total: users.length,
-    active: users.filter((u) => u.status === 'active').length,
-    inactive: users.filter((u) => u.status === 'inactive').length,
-    admins: users.filter((u) => u.role === 'admin').length,
+    active: users.filter((u) => u.status === "active").length,
+    inactive: users.filter((u) => u.status === "inactive").length,
+    admins: users.filter((u) => u.role === "admin").length,
   };
 
   const showModal = (user = null) => {
@@ -110,18 +116,18 @@ const UserManagement = () => {
       if (editingUser) {
         // Cập nhật
         await userService.updateUser(editingUser.id, values);
-        message.success('Cập nhật người dùng thành công');
+        message.success("Cập nhật người dùng thành công");
       } else {
         // Tạo mới
         await userService.createUser(values);
-        message.success('Thêm người dùng mới thành công');
+        message.success("Thêm người dùng mới thành công");
       }
 
       handleCancel();
       fetchUsers();
     } catch (err) {
       console.error(err);
-      message.error('Thao tác thất bại');
+      message.error("Thao tác thất bại");
     }
   };
 
@@ -129,91 +135,97 @@ const UserManagement = () => {
   const handleDelete = async (userId) => {
     try {
       await userService.deleteUser(userId);
-      message.success('Xóa người dùng thành công');
+      message.success("Xóa người dùng thành công");
       fetchUsers();
     } catch (err) {
       console.error(err);
-      message.error('Không thể xóa người dùng');
+      message.error("Không thể xóa người dùng");
     }
   };
 
   const columns = [
     {
-      title: 'Avatar',
-      dataIndex: 'avatar',
-      key: 'avatar',
+      title: "Avatar",
+      dataIndex: "avatar",
+      key: "avatar",
       width: 80,
       render: (avatar, record) => (
         <Avatar
           size="large"
           icon={<UserOutlined />}
           src={avatar}
-          style={{ backgroundColor: '#1890ff' }}
+          style={{ backgroundColor: "#1890ff" }}
         >
           {record.name?.charAt(0).toUpperCase()}
         </Avatar>
       ),
     },
     {
-      title: 'Tên',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Tên",
+      dataIndex: "name",
+      key: "name",
       sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
     },
     {
-      title: 'Số điện thoại',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: "Số điện thoại",
+      dataIndex: "phone",
+      key: "phone",
     },
     {
-      title: 'Vai trò',
-      dataIndex: 'role',
-      key: 'role',
+      title: "Vai trò",
+      dataIndex: "role",
+      key: "role",
       filters: [
-        { text: 'Admin', value: 'admin' },
-        { text: 'Customer', value: 'customer' },
+        { text: "Admin", value: "admin" },
+        { text: "Customer", value: "customer" },
       ],
       onFilter: (value, record) => record.role === value,
       render: (role) => (
-        <Tag color={role === 'admin' ? 'red' : 'blue'}>
-          {role === 'admin' ? 'Admin' : 'Khách hàng'}
+        <Tag color={role === "admin" ? "red" : "blue"}>
+          {role === "admin" ? "Admin" : "Khách hàng"}
         </Tag>
       ),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       filters: [
-        { text: 'Hoạt động', value: 'active' },
-        { text: 'Không hoạt động', value: 'inactive' },
+        { text: "Hoạt động", value: "active" },
+        { text: "Không hoạt động", value: "inactive" },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+        <Tag color={status === "active" ? "green" : "red"}>
+          {status === "active" ? "Hoạt động" : "Không hoạt động"}
         </Tag>
       ),
     },
     {
-      title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "Ngày tạo",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      sorter: (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+      defaultSortOrder: "descend",
+      render: (v) =>
+        v
+          ? dayjs(v).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
+          : "Chưa có dữ liệu",
     },
     {
-      title: 'Đăng nhập cuối',
-      dataIndex: 'lastLogin',
-      key: 'lastLogin',
-      render: (lastLogin) => lastLogin || 'Chưa có',
+      title: "Đăng nhập cuối",
+      dataIndex: "lastLogin",
+      key: "lastLogin",
+      render: (lastLogin) => lastLogin || "Chưa có",
     },
     {
-      title: 'Thao tác',
-      key: 'action',
+      title: "Thao tác",
+      key: "action",
       width: 120,
       render: (_, record) => (
         <Space>
@@ -229,12 +241,7 @@ const UserManagement = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
           </Popconfirm>
         </Space>
       ),
@@ -253,28 +260,50 @@ const UserManagement = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic title="Tổng Users" value={userStats.total} valueStyle={{ color: '#1890ff' }} />
+            <Statistic
+              title="Tổng Users"
+              value={userStats.total}
+              valueStyle={{ color: "#1890ff" }}
+            />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic title="Đang hoạt động" value={userStats.active} valueStyle={{ color: '#3f8600' }} />
+            <Statistic
+              title="Đang hoạt động"
+              value={userStats.active}
+              valueStyle={{ color: "#3f8600" }}
+            />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic title="Không hoạt động" value={userStats.inactive} valueStyle={{ color: '#cf1322' }} />
+            <Statistic
+              title="Không hoạt động"
+              value={userStats.inactive}
+              valueStyle={{ color: "#cf1322" }}
+            />
           </StatCard>
         </Col>
         <Col xs={24} sm={6}>
           <StatCard>
-            <Statistic title="Admins" value={userStats.admins} valueStyle={{ color: '#722ed1' }} />
+            <Statistic
+              title="Admins"
+              value={userStats.admins}
+              valueStyle={{ color: "#722ed1" }}
+            />
           </StatCard>
         </Col>
       </Row>
 
       <StyledCard>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
           <Space>
             <Input.Search
               placeholder="Tìm kiếm theo tên hoặc email"
@@ -301,25 +330,30 @@ const UserManagement = () => {
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} user`,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} của ${total} user`,
             }}
           />
         </Spin>
       </StyledCard>
 
       <Modal
-        title={editingUser ? 'Chỉnh sửa User' : 'Thêm User mới'}
+        title={editingUser ? "Chỉnh sửa User" : "Thêm User mới"}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={handleCancel}
         width={600}
-        okText={editingUser ? 'Cập nhật' : 'Thêm'}
+        okText={editingUser ? "Cập nhật" : "Thêm"}
         cancelText="Hủy"
       >
         <Form form={form} layout="vertical" name="userForm">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="name" label="Tên" rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}>
+              <Form.Item
+                name="name"
+                label="Tên"
+                rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+              >
                 <Input />
               </Form.Item>
             </Col>
@@ -328,8 +362,8 @@ const UserManagement = () => {
                 name="email"
                 label="Email"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' },
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
                 ]}
               >
                 <Input />
@@ -339,12 +373,22 @@ const UserManagement = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}>
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                ]}
+              >
                 <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="role" label="Vai trò" rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}>
+              <Form.Item
+                name="role"
+                label="Vai trò"
+                rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
+              >
                 <Select>
                   <Option value="customer">Khách hàng</Option>
                   <Option value="admin">Admin</Option>
@@ -353,7 +397,11 @@ const UserManagement = () => {
             </Col>
           </Row>
 
-          <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}>
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
+          >
             <Select>
               <Option value="active">Hoạt động</Option>
               <Option value="inactive">Không hoạt động</Option>
