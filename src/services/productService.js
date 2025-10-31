@@ -10,23 +10,14 @@ export const productService = {
     return apiClient.get(`/products/${id}`);
   },
 
-createProduct: async (formData) => {
-  return apiClient.post(`/products`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-},
+  createProduct: async (formData) => {
+    return apiClient.post(`/products`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
   updateProduct: async (id, productData) => {
-    const formData = new FormData();
-    Object.keys(productData).forEach((key) => {
-      if (Array.isArray(productData[key])) {
-        productData[key].forEach((item) => formData.append(key, item));
-      } else {
-        formData.append(key, productData[key]);
-      }
-    });
-
-    return apiClient.put(`/products/${id}`, formData, {
+    return apiClient.put(`/products/${id}`, productData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },

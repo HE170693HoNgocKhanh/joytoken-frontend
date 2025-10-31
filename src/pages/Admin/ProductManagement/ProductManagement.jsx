@@ -95,14 +95,51 @@ const ProductManagement = () => {
   };
 
   useEffect(() => {
-    if (isModalVisible && editingProduct) {
-      form.setFieldsValue({
-        name: editingProduct.name,
-        price: editingProduct.price,
-        stock: editingProduct.countInStock,
-        description: editingProduct.description,
-        category: editingProduct.category?._id,
-      });
+    if (isModalVisible) {
+      if (editingProduct) {
+        // Chỉnh sửa: set giá trị form từ product
+        form.setFieldsValue({
+          name: editingProduct.name,
+          price: editingProduct.price,
+          stock: editingProduct.countInStock,
+          description: editingProduct.description,
+          category: editingProduct.category?._id,
+          variants: editingProduct.variants?.length
+            ? editingProduct.variants.map((v) => ({
+                size: v.size,
+                color: v.color,
+                price: v.price,
+                countInStock: v.countInStock,
+              }))
+            : [{}], // nếu không có variant thì tạo 1 trống
+          image: editingProduct.image
+            ? [
+                {
+                  uid: "-1",
+                  name: "image.jpg",
+                  status: "done",
+                  url: editingProduct.image,
+                },
+              ]
+            : [],
+          images: editingProduct.images
+            ? editingProduct.images.map((img, index) => ({
+                uid: index,
+                name: `image-${index}.jpg`,
+                status: "done",
+                url: img,
+              }))
+            : [],
+        });
+      } else {
+        // Thêm mới: reset form
+        form.resetFields();
+        form.setFieldsValue({
+          variants: [{}],
+          image: [],
+          images: [],
+        });
+      }
     }
   }, [isModalVisible, editingProduct, form]);
 
@@ -141,7 +178,7 @@ const ProductManagement = () => {
       // Ảnh phụ
       if (values.images && values.images.length > 0) {
         values.images.forEach((file) => {
-          formData.append("images", file.originFileObj); // phải đúng "variants"
+          formData.append("images", file.originFileObj);
         });
       }
 
@@ -223,6 +260,11 @@ const ProductManagement = () => {
           style: "currency",
           currency: "VND",
         }).format(price),
+    },
+    {
+      title: "Phiên bản",
+      key: "variants",
+      render: (_, record) => record.variants?.length || 0,
     },
     {
       title: "Tồn kho",
@@ -379,7 +421,7 @@ const ProductManagement = () => {
                     align="middle"
                     style={{ marginBottom: 8 }}
                   >
-                    <Col span={7}>
+                    <Col span={5}>
                       <Form.Item
                         {...restField}
                         name={[name, "size"]}
@@ -394,23 +436,23 @@ const ProductManagement = () => {
                         </Select>
                       </Form.Item>
                     </Col>
-                    <Col span={7}>
+                    <Col span={8}>
                       <Form.Item
                         {...restField}
                         name={[name, "color"]}
                         rules={[{ required: true, message: "Nhập màu" }]}
                       >
-                        <Input placeholder="Color" />
+                        <Input placeholder="Nhập màu" />
                       </Form.Item>
                     </Col>
-                    <Col span={6}>
+                    <Col span={5}>
                       <Form.Item
                         {...restField}
                         name={[name, "price"]}
                         rules={[{ required: true, message: "Nhập giá" }]}
                       >
                         <InputNumber
-                          placeholder="Price"
+                          placeholder="Nhập giá"
                           style={{ width: "100%" }}
                           min={0}
                           formatter={(v) =>
@@ -419,7 +461,7 @@ const ProductManagement = () => {
                         />
                       </Form.Item>
                     </Col>
-                    <Col span={3}>
+                    <Col span={5}>
                       <Form.Item
                         {...restField}
                         name={[name, "countInStock"]}
@@ -428,14 +470,14 @@ const ProductManagement = () => {
                         <InputNumber
                           style={{ width: "100%" }}
                           min={0}
-                          placeholder="Stock"
+                          placeholder="Nhập tồn kho"
                         />
                       </Form.Item>
                     </Col>
                     <Col span={1}>
                       <MinusCircleOutlined
                         onClick={() => remove(name)}
-                        style={{ fontSize: 20, color: "red", marginBottom: 25 }}
+                        style={{ fontSize: 20, color: "red", marginBottom: 23 }}
                       />
                     </Col>
                   </Row>
