@@ -17,12 +17,15 @@ import {
   Col,
   Image,
   Spin,
+  Upload,
 } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
   EyeOutlined,
+  UploadOutlined,
+  MinusCircleOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import styled from "styled-components";
@@ -85,18 +88,21 @@ const ProductManagement = () => {
     setEditingProduct(product);
     setIsModalVisible(true);
 
-    if (product) {
-      form.setFieldsValue({
-        name: product.name,
-        price: product.price,
-        stock: product.countInStock,
-        description: product.description,
-        categoryId: product.category?._id,
-      });
-    } else {
-      form.resetFields();
-    }
+    // ❌ Bỏ form.setFieldsValue() ở đây đi
+    form.resetFields();
   };
+
+  useEffect(() => {
+    if (isModalVisible && editingProduct) {
+      form.setFieldsValue({
+        name: editingProduct.name,
+        price: editingProduct.price,
+        stock: editingProduct.countInStock,
+        description: editingProduct.description,
+        category: editingProduct.category?._id,
+      });
+    }
+  }, [isModalVisible, editingProduct, form]);
 
   const handleCancel = () => {
     setIsModalVisible(false);
@@ -105,34 +111,59 @@ const ProductManagement = () => {
   };
 
   // 🧩 4️⃣ Submit form thêm / sửa
+  // --- Thay thế nguyên hàm handleSubmit ---
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
-      const payload = {
-        name: values.name,
-        description: values.description,
-        price: Number(values.price),
-        countInStock: Number(values.stock),
-        category: values.categoryId,
-      };
+      const values = await form.validateFields(); // lấy giá trị từ form
 
-      setLoading(true);
+      const formData = new FormData();
+      formData.append("name", values.name);
+      formData.append("description", values.description);
+      formData.append("price", values.price);
+      formData.append("countInStock", values.stock || 0);
+      formData.append("category", values.category);
 
+      if (values.variants && values.variants.length > 0) {
+        values.variants.forEach((v) => {
+          formData.append("variants", JSON.stringify(v));
+        });
+      }
+
+      // Ảnh chính
+      if (values.image && values.image.length > 0) {
+        formData.append("image", values.image[0].originFileObj);
+      }
+
+      // Ảnh phụ
+      if (values.images && values.images.length > 0) {
+        values.images.forEach((file) => {
+          formData.append("images", file.originFileObj); // phải đúng "variants"
+        });
+      }
+
+      console.log("📦 FormData entries:");
+      for (let [key, val] of formData.entries()) {
+        console.log(key, val);
+      }
+
+      let res;
       if (editingProduct) {
-        await productService.updateProduct(editingProduct._id, payload);
-        messageApi.success("Cập nhật sản phẩm thành công!");
+        res = await productService.updateProduct(editingProduct._id, formData);
       } else {
-        await productService.createProduct(payload);
-        messageApi.success("Thêm sản phẩm mới thành công!");
+        res = await productService.createProduct(formData);
       }
 
       handleCancel();
       fetchProducts();
-    } catch (error) {
-      console.error(error);
-      messageApi.error("❌ Lưu sản phẩm thất bại!");
-    } finally {
-      setLoading(false);
+
+      // Sau khi modal đóng, show message
+      messageApi.success(
+        editingProduct
+          ? "Cập nhật sản phẩm thành công"
+          : "Tạo sản phẩm thành công"
+      );
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -161,7 +192,7 @@ const ProductManagement = () => {
         <Image
           width={50}
           height={50}
-          src={img || "https://via.placeholder.com/80"}
+          src={img || "https://placehold.co/80x80?text=No+Image"}
           alt="product"
         />
       ),
@@ -283,7 +314,7 @@ const ProductManagement = () => {
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
@@ -292,25 +323,7 @@ const ProductManagement = () => {
                 <Input placeholder="Nhập tên sản phẩm" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                name="categoryId"
-                label="Danh mục"
-                rules={[{ required: true, message: "Chọn danh mục" }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  {categories.map((cat) => (
-                    <Option key={cat._id} value={cat._id}>
-                      {cat.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
                 name="price"
                 label="Giá bán (VNĐ)"
@@ -325,19 +338,146 @@ const ProductManagement = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item
-                name="stock"
-                label="Số lượng tồn"
-                rules={[{ required: true, message: "Nhập số lượng tồn" }]}
+                name="category"
+                label="Danh mục"
+                rules={[{ required: true, message: "Chọn danh mục" }]}
               >
-                <InputNumber style={{ width: "100%" }} min={0} />
+                <Select placeholder="Chọn danh mục">
+                  {categories.map((cat) => (
+                    <Option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item name="description" label="Mô tả">
             <TextArea rows={3} placeholder="Nhập mô tả sản phẩm..." />
+          </Form.Item>
+
+          <Form.List name="variants">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Row
+                    gutter={16}
+                    key={key}
+                    align="middle"
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Col span={7}>
+                      <Form.Item
+                        {...restField}
+                        name={[name, "size"]}
+                        rules={[{ required: true, message: "Nhập size" }]}
+                      >
+                        <Input placeholder="Size" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={7}>
+                      <Form.Item
+                        {...restField}
+                        name={[name, "color"]}
+                        rules={[{ required: true, message: "Nhập màu" }]}
+                      >
+                        <Input placeholder="Color" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item
+                        {...restField}
+                        name={[name, "price"]}
+                        rules={[{ required: true, message: "Nhập giá" }]}
+                      >
+                        <InputNumber
+                          placeholder="Price"
+                          style={{ width: "100%" }}
+                          min={0}
+                          formatter={(v) =>
+                            `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                          }
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={3}>
+                      <Form.Item
+                        {...restField}
+                        name={[name, "countInStock"]}
+                        rules={[{ required: true, message: "Nhập tồn kho" }]}
+                      >
+                        <InputNumber
+                          style={{ width: "100%" }}
+                          min={0}
+                          placeholder="Stock"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={1}>
+                      <MinusCircleOutlined
+                        onClick={() => remove(name)}
+                        style={{ fontSize: 20, color: "red" }}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+
+                <Form.Item>
+                  <Button
+                    type="dashed"
+                    onClick={() => add()}
+                    block
+                    icon={<PlusOutlined />}
+                  >
+                    Thêm phiên bản
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
+
+          <Form.Item
+            name="image"
+            label="Ảnh chính"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => e && e.fileList}
+          >
+            <Upload
+              listType="picture-card"
+              maxCount={1}
+              beforeUpload={() => false} 
+            >
+              {form.getFieldValue("image")?.length >= 1 ? null : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải lên</div>
+                </div>
+              )}
+            </Upload>
+          </Form.Item>
+
+          <Form.Item
+            name="images"
+            label="Ảnh phụ (tối đa 3 ảnh)"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => e?.fileList || []}
+          >
+            <Upload
+              listType="picture-card"
+              multiple
+              maxCount={3}
+              beforeUpload={() => false}
+            >
+              {form.getFieldValue("images")?.length >= 3 ? null : (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải lên</div>
+                </div>
+              )}
+            </Upload>
           </Form.Item>
         </Form>
       </Modal>
