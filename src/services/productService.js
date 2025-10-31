@@ -15,6 +15,7 @@ createProduct: async (formData) => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 },
+
   updateProduct: async (id, productData) => {
     const formData = new FormData();
     Object.keys(productData).forEach((key) => {

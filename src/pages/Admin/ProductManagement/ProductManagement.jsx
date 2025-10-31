@@ -52,6 +52,8 @@ const ProductManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
 
+  const SIZES = ["Lớn", "Trung Bình", "Nhỏ"];
+
   // 🧩 1️⃣ Lấy danh sách sản phẩm
   const fetchProducts = async () => {
     try {
@@ -120,14 +122,16 @@ const ProductManagement = () => {
       formData.append("name", values.name);
       formData.append("description", values.description);
       formData.append("price", values.price);
-      formData.append("countInStock", values.stock || 0);
       formData.append("category", values.category);
 
+      let totalStock = 0;
       if (values.variants && values.variants.length > 0) {
         values.variants.forEach((v) => {
+          totalStock += v.countInStock || 0;
           formData.append("variants", JSON.stringify(v));
         });
       }
+      formData.append("countInStock", totalStock);
 
       // Ảnh chính
       if (values.image && values.image.length > 0) {
@@ -312,7 +316,13 @@ const ProductManagement = () => {
         onCancel={handleCancel}
         width={800}
       >
-        <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            variants: [{}], // tạo sẵn 1 variant trống
+          }}
+        >
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
@@ -373,9 +383,15 @@ const ProductManagement = () => {
                       <Form.Item
                         {...restField}
                         name={[name, "size"]}
-                        rules={[{ required: true, message: "Nhập size" }]}
+                        rules={[{ required: true, message: "Chọn size" }]}
                       >
-                        <Input placeholder="Size" />
+                        <Select placeholder="Chọn size">
+                          {SIZES.map((size) => (
+                            <Option key={size} value={size}>
+                              {size}
+                            </Option>
+                          ))}
+                        </Select>
                       </Form.Item>
                     </Col>
                     <Col span={7}>
@@ -419,7 +435,7 @@ const ProductManagement = () => {
                     <Col span={1}>
                       <MinusCircleOutlined
                         onClick={() => remove(name)}
-                        style={{ fontSize: 20, color: "red" }}
+                        style={{ fontSize: 20, color: "red", marginBottom: 25 }}
                       />
                     </Col>
                   </Row>
@@ -448,7 +464,7 @@ const ProductManagement = () => {
             <Upload
               listType="picture-card"
               maxCount={1}
-              beforeUpload={() => false} 
+              beforeUpload={() => false}
             >
               {form.getFieldValue("image")?.length >= 1 ? null : (
                 <div>
