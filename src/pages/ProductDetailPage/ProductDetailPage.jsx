@@ -23,7 +23,7 @@ import {
   ArrowButton,
   RelatedSlider,
 } from "./style";
-import axios from "axios";
+import { productService } from "../../services/productService";
 import VariantSelector from "../../components/ProductComponent/VariantSelector";
 import ReviewSection from "../../components/ProductComponent/ReviewSection";
 
@@ -33,14 +33,23 @@ const ProductDetailPage = () => {
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
-  const [selectedVariant, setSelectedVariant] = useState(product?.variants[0]);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [reviews, setReviews] = useState([]);
-
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [images, setImages] = useState([]);
   const [mainImage, setMainImage] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [maxReached, setMaxReached] = useState(false);
+
+  // 🔁 Khi chọn variant mới => reset quantity về 1
+  useEffect(() => {
+    setQuantity(1);
+    setMaxReached(false);
+  }, [selectedVariant]);
+
   const itemsPerSlide = 4;
 
   // ----- Xử lý chuyển slide sản phẩm liên quan -----
@@ -55,23 +64,47 @@ const ProductDetailPage = () => {
     else setCurrentIndex(currentIndex - itemsPerSlide);
   };
 
-  // ----- Lấy dữ liệu từ database.json -----
+  // ----- Lấy dữ liệu từ API -----
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const productDetail = await axios.get(
-          `http://localhost:8080/api/products/${id}`
+        const productDetail = await productService.getProductById(id);
+        const productData = productDetail.data;
+        console.log("productData", productData);
+
+        // Lấy sản phẩm liên quan cùng category
+        const relatedProducts = await productService.getAllProducts({
+          category: productData.category._id,
+        });
+
+        setProduct(productData);
+        setRelated(relatedProducts.data);
+
+        // Gộp ảnh chính + ảnh phụ
+        const allImages = [
+          ...(productData.image ? [productData.image] : []),
+          ...(Array.isArray(productData.images) ? productData.images : []),
+        ];
+        setImages(allImages);
+        setMainImage(allImages[0] || "");
+
+        // Variant đầu tiên (nếu có)
+        setSelectedVariant(
+          Array.isArray(productData.variants) && productData.variants.length > 0
+            ? productData.variants[0]
+            : null
         );
-        const relatedProducts = await axios.get(
-          `http://localhost:8080/api/products?category=${productDetail.data.data.category._id}`
-        );
-        const listReview = await axios.get(
+
+        // Lấy review
+        // const reviewRes = await productService.getReviewsByProduct(id);
+        // setReviews(reviewRes.data.data);
+
+        const resReviews = await fetch(
           `http://localhost:8080/api/reviews/product/${id}`
         );
-        setReviews(listReview.data.data);
-        setRelated(relatedProducts.data.data);
-        setProduct(productDetail.data.data);
+        const dataReviews = await resReviews.json();
+        setReviews(dataReviews.data || []);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
       } finally {
@@ -81,60 +114,27 @@ const ProductDetailPage = () => {
 
     fetchData();
   }, [id]);
-  console.log(related);
-  const images = product?.variants.map((item) => item.image);
 
   // ----- Thêm vào giỏ hàng -----
   const handleAddToCart = () => {
-    // 1️⃣ Kiểm tra variant
-    if (!selectedVariant || selectedVariant === "Choose Options") {
+    if (!selectedVariant) {
       setMessage("⚠️ Vui lòng chọn phân loại trước khi thêm vào giỏ hàng!");
       setTimeout(() => setMessage(null), 2000);
       return;
     }
 
-    // 2️⃣ Lấy giỏ hàng hiện tại từ localStorage
-    let cart = [];
-    try {
-      cart = JSON.parse(localStorage.getItem("cart")) || [];
-      if (!Array.isArray(cart)) cart = [];
-    } catch (error) {
-      console.error("Cart parse error:", error);
-      cart = [];
-    }
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    // 3️⃣ Lấy dữ liệu variant được chọn
-    const variantData =
-      typeof selectedVariant === "object"
-        ? selectedVariant
-        : product.variants?.find((v) => v.name === selectedVariant);
-
-    if (!variantData) {
-      setMessage("⚠️ Không tìm thấy phân loại hợp lệ!");
-      setTimeout(() => setMessage(null), 2000);
-      return;
-    }
-
-    // Kiểm tra tồn kho
-    if (variantData.stock === 0) {
-      setMessage("❌ Phân loại này đã hết hàng!");
-      setTimeout(() => setMessage(null), 2000);
-      return;
-    }
-
-    // 4️⃣ Tạo sản phẩm mới
     const newItem = {
-      id: id, // id sản phẩm gốc
+      id: product._id,
       name: product.name,
-      image: variantData?.image || product.image || "",
-      price: product.price,
-      variants: product.variants,
-      selectedVariant: variantData,
+      image: mainImage || product.image,
+      price: selectedVariant.price || product.price,
+      selectedVariant,
       quantity: 1,
       selected: false,
     };
 
-    // 5️⃣ Kiểm tra sản phẩm trùng (id + variant._id)
     const existingIndex = cart.findIndex(
       (item) =>
         item.id === newItem.id &&
@@ -142,38 +142,20 @@ const ProductDetailPage = () => {
     );
 
     if (existingIndex !== -1) {
-      // Nếu đã tồn tại → tăng số lượng
-      const existingItem = cart[existingIndex];
-
-      if (existingItem.stock && existingItem.quantity >= existingItem.stock) {
-        setMessage("⚠️ Đã đạt giới hạn số lượng tồn kho!");
-        setTimeout(() => setMessage(null), 2000);
-        return;
-      }
-
-      // ✅ Tăng quantity
-      cart[existingIndex] = {
-        ...existingItem,
-        quantity: existingItem.quantity + 1,
-      };
+      cart[existingIndex].quantity += 1;
     } else {
-      // ✅ Thêm mới vào giỏ
       cart.push(newItem);
     }
 
-    // 6️⃣ Lưu lại vào localStorage
     localStorage.setItem("cart", JSON.stringify(cart));
-
-    // 7️⃣ Thông báo
     setMessage("🛍️ Đã thêm sản phẩm vào giỏ hàng!");
     setTimeout(() => setMessage(null), 2000);
   };
 
   // ----- Thêm vào wishlist -----
   const handleAddToWishlist = () => {
-    const { id } = useParams();
     const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
-    const exists = wishlist.find((item) => item.id === product.id);
+    const exists = wishlist.find((item) => item._id === product._id);
     if (!exists) {
       wishlist.push(product);
       localStorage.setItem("wishlist", JSON.stringify(wishlist));
@@ -193,25 +175,27 @@ const ProductDetailPage = () => {
       <BackButton onClick={() => navigate(-1)}>← Quay lại</BackButton>
 
       <ProductLayout>
-        {/* Ảnh chính */}
+        {/* Ảnh sản phẩm */}
         <ImageWrapper>
-          <ProductImage src={mainImage || product.image} alt={product.name} />
+          <ProductImage src={mainImage} alt={product.name} />
+
           <div
             style={{
               display: "flex",
               gap: "10px",
               marginTop: "10px",
               justifyContent: "center",
+              flexWrap: "wrap",
             }}
           >
-            {images?.map((img, index) => (
+            {images.map((img, index) => (
               <img
                 key={index}
                 src={img}
                 alt={`Ảnh ${index + 1}`}
                 onClick={() => {
                   setMainImage(img);
-                  setActiveIndex(index); // ✅ thêm state để lưu index đang active
+                  setActiveIndex(index);
                 }}
                 style={{
                   width: "70px",
@@ -244,28 +228,155 @@ const ProductDetailPage = () => {
             {[...Array(product.rating)].map((_, i) => (
               <FaStar key={i} color="#f5a623" />
             ))}
-            <span style={{ color: "#666" }}>(267 Reviews)</span>
+            <span style={{ color: "#666" }}>
+              ({product.numReviews || 0} Reviews)
+            </span>
           </div>
 
-          <Price>₫{product.price.toLocaleString()}</Price>
-          <Description>{product.description}</Description>
-          <StockStatus inStock={product.countInStock > 0}>
-            {product.countInStock > 0 ? "Còn hàng" : "Hết hàng"}
+          <Price>
+            Giá bán:{" "}
+            {(selectedVariant?.price ?? product.price).toLocaleString("vi-VN")}đ
+          </Price>
+          <Description>Mô tả: {product.description}</Description>
+          <StockStatus inStock={selectedVariant?.countInStock > 0}>
+            Trạng thái:{" "}
+            {selectedVariant?.countInStock > 0 ? "Còn hàng" : "Hết hàng"}
           </StockStatus>
 
-          {/* 🎯 Chọn variant (size/style) */}
+          {/* 🎯 Chọn variant (màu, size,...) */}
           <StyleSelector>
-            <VariantSelector
-              product={product}
-              selectedVariant={selectedVariant}
-              setSelectedVariant={setSelectedVariant}
-              setMainImage={setMainImage}
-            />
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px",
+                marginTop: "8px",
+              }}
+            >
+              {product.variants.map((v) => (
+                <button
+                  key={v._id}
+                  onClick={() => setSelectedVariant(v)}
+                  style={{
+                    border:
+                      selectedVariant?._id === v._id
+                        ? "2px solid #007bff"
+                        : "1px solid #ccc",
+                    borderRadius: "8px",
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    background:
+                      selectedVariant?._id === v._id ? "#e6f0ff" : "#fff",
+                    fontSize: "14px",
+                  }}
+                >
+                  {`${v.size} - ${v.color} - ${v.countInStock}`}
+                </button>
+              ))}
+            </div>
           </StyleSelector>
+
+          <div style={{ marginTop: "16px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "1rem",
+                marginBottom: "8px",
+                opacity:
+                  (selectedVariant?.countInStock ?? product.countInStock) === 0
+                    ? 0.6
+                    : 1,
+                pointerEvents:
+                  (selectedVariant?.countInStock ?? product.countInStock) === 0
+                    ? "none"
+                    : "auto",
+              }}
+            >
+              <span style={{ fontWeight: "500" }}>Số lượng</span>
+
+              {/* Ô chọn số lượng */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                  disabled={quantity <= 1}
+                  style={{
+                    padding: "6px 12px",
+                    border: "none",
+                    background: "#fff",
+                    cursor: quantity <= 1 ? "not-allowed" : "pointer",
+                    fontSize: "18px",
+                  }}
+                >
+                  –
+                </button>
+
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value)) setQuantity(value);
+                  }}
+                  onBlur={() => {
+                    if (quantity < 1) setQuantity(1);
+                  }}
+                  style={{
+                    width: "60px",
+                    textAlign: "center",
+                    border: "none",
+                    outline: "none",
+                    fontSize: "16px",
+                    color: "#d35400",
+                    fontWeight: "bold",
+                    borderLeft: "1px solid #ccc",
+                    borderRight: "1px solid #ccc",
+                  }}
+                />
+
+                <button
+                  onClick={() => {
+                    const maxStock =
+                      selectedVariant?.countInStock ?? product.countInStock;
+                    setQuantity((prev) => (prev < maxStock ? prev + 1 : prev));
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    border: "none",
+                    background: "#fff",
+                    cursor: "pointer",
+                    fontSize: "18px",
+                  }}
+                >
+                  +
+                </button>
+              </div>
+
+              <span style={{ color: "#666" }}>
+                {(selectedVariant?.countInStock ?? product.countInStock) || 0}{" "}
+                sản phẩm có sẵn
+              </span>
+            </div>
+
+            {/* Thông báo hết hàng */}
+            {(selectedVariant?.countInStock ?? product.countInStock) === 0 && (
+              <div style={{ color: "red", marginTop: "6px" }}>
+                Sản phẩm hiện đã hết hàng.
+              </div>
+            )}
+          </div>
 
           <ActionWrapper>
             <AddToCartButton onClick={handleAddToCart}>
-              🛒 Add to Bag
+              🛒 Add to Cart
             </AddToCartButton>
             <WishlistButton onClick={handleAddToWishlist}>
               <FaHeart /> Add to Wishlist
@@ -276,9 +387,10 @@ const ProductDetailPage = () => {
         </InfoWrapper>
       </ProductLayout>
 
+      {/* Đánh giá sản phẩm */}
       <ReviewSection productId={id} initialReviews={reviews} />
 
-      {/* 🧸 Related Products */}
+      {/* Sản phẩm liên quan */}
       <RelatedSection>
         <h3>Sản phẩm liên quan</h3>
         <div style={{ position: "relative" }}>
@@ -291,8 +403,8 @@ const ProductDetailPage = () => {
               .slice(currentIndex, currentIndex + itemsPerSlide)
               .map((r) => (
                 <RelatedCard
-                  key={r.id}
-                  onClick={() => navigate(`/product/${r.id}`)}
+                  key={r._id}
+                  onClick={() => navigate(`/product/${r._id}`)}
                 >
                   <img src={r.image} alt={r.name} />
                   <div className="name">{r.name}</div>

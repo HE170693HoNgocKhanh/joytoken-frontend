@@ -68,23 +68,33 @@ const HomePage = () => {
         <h2 className="section-title">Featured Products</h2>
 
         <Slider {...settings}>
-          {products.map((product) => (
-            <div key={product._id} className="product-card">
-              <Card
-                onClick={() => navigate(`/product/${product._id}`)}
-                hoverable
-                cover={
-                  <img
-                    alt={product.name}
-                    src={product.image}
-                    style={{ height: 220, objectFit: "cover" }}
+          {products.map((product) => {
+            // ✅ Tính giá rẻ nhất cho từng sản phẩm
+            const minPrice = product.variants?.length
+              ? Math.min(...product.variants.map((v) => v.price))
+              : product.price;
+
+            return (
+              <div key={product._id} className="product-card">
+                <Card
+                  onClick={() => navigate(`/product/${product._id}`)}
+                  hoverable
+                  cover={
+                    <img
+                      alt={product.name}
+                      src={product.image}
+                      style={{ height: 220, objectFit: "cover" }}
+                    />
+                  }
+                >
+                  <Card.Meta
+                    title={product.name}
+                    description={`₫${minPrice.toLocaleString()}`}
                   />
-                }
-              >
-                <Card.Meta title={product.name} description={product.price} />
-              </Card>
-            </div>
-          ))}
+                </Card>
+              </div>
+            );
+          })}
         </Slider>
 
         <h1

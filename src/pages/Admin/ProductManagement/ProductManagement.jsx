@@ -411,6 +411,10 @@ const ProductManagement = () => {
             <TextArea rows={3} placeholder="Nhập mô tả sản phẩm..." />
           </Form.Item>
 
+          <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
+            Phiên bản
+          </Typography.Text>
+
           <Form.List name="variants">
             {(fields, { add, remove }) => (
               <>

@@ -58,6 +58,34 @@ export const ProductTitle = styled.h1`
   margin-bottom: 0.5rem;
 `;
 
+// ✅ Bổ sung: CategoryLabel cho hiển thị category
+export const CategoryLabel = styled.span`
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+// ✅ Bổ sung: RatingWrapper cho rating stars và numReviews
+export const RatingWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem 0;
+  font-size: 1rem;
+
+  span {
+    color: #666;
+    font-size: 0.95rem;
+  }
+`;
+
 export const Price = styled.div`
   font-size: 1.6rem;
   color: #d9534f;
@@ -151,6 +179,35 @@ export const CustomSection = styled.div`
   }
 `;
 
+// ✅ Bổ sung: DetailsSection cho các phần chi tiết (variants, personalize, etc.)
+export const DetailsSection = styled.section`
+  margin: 3rem 0 2rem 0;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eee;
+
+  h3,
+  h4 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+
+  p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+    margin: 2rem 0 1rem 0;
+  }
+`;
+
 export const ActionWrapper = styled.div`
   margin-top: 1.5rem;
   display: flex;
@@ -168,8 +225,14 @@ export const AddToCartButton = styled.button`
   font-weight: 500;
   transition: background 0.2s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #0056b3;
+  }
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   &:active {
@@ -282,6 +345,12 @@ export const RelatedCard = styled.div`
   .price {
     color: #d9534f;
     font-weight: 600;
+  }
+
+  .stock {
+    font-size: 0.85rem;
+    color: ${(props) => (props.inStock ? "green" : "red")};
+    margin-top: 0.25rem;
   }
 `;
 
@@ -437,5 +506,96 @@ export const Input = styled.input`
 
   &:focus {
     border-color: #007bff;
+  }
+`;
+
+// ✅ Bổ sung: DetailItem cho các item chi tiết (nếu dùng list)
+export const DetailItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  strong {
+    color: #333;
+  }
+
+  span {
+    color: #666;
+  }
+`;
+
+// ✅ Bổ sung: VariantTable cho bảng variants
+export const VariantTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  thead {
+    background: #f8f9fa;
+  }
+
+  th,
+  td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  th {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  tbody tr:hover {
+    background: #f8f9fa;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+
+    th,
+    td {
+      padding: 8px 10px;
+    }
+  }
+`;
+
+// ✅ Bổ sung: SellerInfo cho thông tin seller
+export const SellerInfo = styled(DetailsSection)`
+  background: #f8f9fa;
+  border-color: #e9ecef;
+
+  h4 {
+    color: #495057;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+`;
+
+// ✅ Bổ sung: DateInfo cho ngày tạo/cập nhật
+export const DateInfo = styled(DetailsSection)`
+  background: #f8f9fa;
+  text-align: center;
+  font-size: 0.9rem;
+
+  p {
+    margin: 0.25rem 0;
+    color: #6c757d;
   }
 `;

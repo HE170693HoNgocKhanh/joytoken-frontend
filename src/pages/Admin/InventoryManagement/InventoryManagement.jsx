@@ -210,21 +210,6 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: 'Tối thiểu',
-      dataIndex: 'minStock',
-      key: 'minStock',
-    },
-    {
-      title: 'Tối đa',
-      dataIndex: 'maxStock',
-      key: 'maxStock',
-    },
-    {
-      title: 'Vị trí',
-      dataIndex: 'location',
-      key: 'location',
-    },
-    {
       title: 'Nhà cung cấp',
       dataIndex: 'supplier',
       key: 'supplier',
