@@ -22,7 +22,7 @@ const Header = () => {
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("accessToken");
   const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
