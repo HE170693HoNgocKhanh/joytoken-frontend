@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { use } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import HeroCarousel from "../../components/ProductComponent/HeroCarousel";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -174,6 +175,7 @@ const HomePage = () => {
           </div>
         </Link>
       </CategorySection>
+      <HeroCarousel />
     </HomeContainer>
   );
 };

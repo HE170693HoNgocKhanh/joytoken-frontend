@@ -42,9 +42,11 @@ const CartPage = () => {
     setSelectAll(!selectAll);
   };
 
-  const toggleSelectItem = (id) => {
+  const toggleSelectItem = (productId, variantId) => {
     const next = cart.map((i) =>
-      i.id === id ? { ...i, selected: !i.selected } : i
+      i.id === productId && i.selectedVariant?._id === variantId
+        ? { ...i, selected: !i.selected }
+        : i
     );
     persist(next);
   };
@@ -57,10 +59,20 @@ const CartPage = () => {
   };
 
   // ✅ Đã fix chuẩn theo logic bạn yêu cầu
-  const updateVariant = (productId, newVariantName) => {
-    const nextCart = [...cart];
+  const updateVariant = (productId, currentVariantId, newVariantName) => {
+    const nextCart = cart.map((item) => ({
+      ...item,
+      variants: [...item.variants],
+      selectedVariant: item.selectedVariant
+        ? { ...item.selectedVariant }
+        : null,
+    }));
 
-    const currentIndex = nextCart.findIndex((item) => item.id === productId);
+    const currentIndex = nextCart.findIndex(
+      (item) =>
+        item.id === productId && item.selectedVariant?._id === currentVariantId
+    );
+
     if (currentIndex === -1) return;
 
     const currentItem = nextCart[currentIndex];
@@ -70,7 +82,6 @@ const CartPage = () => {
     );
     if (!newVariant) return;
 
-    // Kiểm tra có sản phẩm khác cùng id & cùng variant chưa
     const duplicateIndex = nextCart.findIndex(
       (item, idx) =>
         idx !== currentIndex &&
@@ -79,7 +90,6 @@ const CartPage = () => {
     );
 
     if (duplicateIndex !== -1) {
-      // Gộp quantity
       const duplicateItem = nextCart[duplicateIndex];
       const mergedQty =
         (duplicateItem.quantity || 1) + (currentItem.quantity || 1);
@@ -87,7 +97,7 @@ const CartPage = () => {
       const mergedItem = {
         ...duplicateItem,
         quantity: mergedQty,
-        selectedVariant: newVariant,
+        selectedVariant: { ...newVariant },
         image: newVariant.image || duplicateItem.image,
       };
 
@@ -100,7 +110,7 @@ const CartPage = () => {
     } else {
       nextCart[currentIndex] = {
         ...currentItem,
-        selectedVariant: newVariant,
+        selectedVariant: { ...newVariant },
         image: newVariant.image || currentItem.image,
       };
       persist(nextCart);
@@ -171,9 +181,13 @@ const CartPage = () => {
             key={item.id + (item.selectedVariant?._id || "")}
             item={item}
             cart={cart} // ✅ truyền thêm cart xuống
-            onToggle={() => toggleSelectItem(item.id)}
+            onToggle={() =>
+              toggleSelectItem(item.id, item.selectedVariant?._id)
+            }
             onQtyChange={(q) => updateQty(item.id, q)}
-            onVariantChange={(v) => updateVariant(item.id, v)}
+            onVariantChange={(v) =>
+              updateVariant(item.id, item.selectedVariant?._id, v)
+            }
             onRemove={() => removeItem(item.id, item.selectedVariant?._id)}
           />
         ))}
