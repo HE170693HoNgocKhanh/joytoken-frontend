@@ -220,7 +220,7 @@ const Dashboard = () => {
       title: "Tổng tiền",
       dataIndex: "totalPrice",
       key: "totalPrice",
-      render: (value) => formatCurrency(value),
+      render: (value) => value,
     },
     {
       title: "Trạng thái",
@@ -312,10 +312,10 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <StatCard>
             <Statistic
-              title="Doanh thu hôm nay"
+              title="Tổng Doanh thu"
               value={stats.totalRevenue}
               prefix={<DollarOutlined />}
-              formatter={(value) => formatCurrency(value)}
+              formatter={(value) => value}
               valueStyle={{ color: "#cf1322" }}
               suffix={<ArrowUpOutlined />}
             />
@@ -378,10 +378,10 @@ const Dashboard = () => {
             <Col xs={24} sm={12} lg={6}>
               <StatCard>
                 <Statistic
-                  title="Tổng doanh thu"
+                  title="Doanh thu ngày"
                   value={dailySummary.totalRevenue}
                   prefix={<DollarOutlined />}
-                  formatter={(value) => formatCurrency(value)}
+                  formatter={(value) => value}
                   valueStyle={{ color: "#722ed1" }}
                 />
               </StatCard>
@@ -528,8 +528,8 @@ const Dashboard = () => {
                   },
                   {
                     title: "Thể loại",
-                    // dataIndex: "name",
-                    // key: "name",
+                    dataIndex: "variant",
+                    key: "variant",
                     ellipsis: true,
                   },
                   {
