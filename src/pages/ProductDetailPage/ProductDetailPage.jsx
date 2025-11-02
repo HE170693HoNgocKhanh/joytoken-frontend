@@ -81,7 +81,6 @@ const ProductDetailPage = () => {
 
     fetchData();
   }, [id]);
-  console.log(related);
   const images = product?.variants.map((item) => item.image);
 
   // ----- Thêm vào giỏ hàng -----

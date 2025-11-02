@@ -5,6 +5,7 @@ import ProductList from "../pages/ProductsPage/ProductsList";
 import HomePage from "./../pages/HomePage/HomePage";
 import ProductDetailPage from "../pages/ProductDetailPage/ProductDetailPage";
 import CartPage from "../pages/CartPage/CartPage";
+import ChatPage from "../pages/ChatPage/ChatPage";
 
 // Admin Pages
 import Dashboard from "../pages/Admin/Dashboard/Dashboard";
@@ -43,6 +44,14 @@ export const routes = [
     page: CartPage,
     isShowHeader: true,
   },
+  {
+    path: "/chat",
+    page: ChatPage,
+  },
+  {
+    path: "/chat/:id",
+    page: ChatPage,
+  },
   // Admin Routes
 
   {
@@ -75,6 +84,7 @@ export const routes = [
     isShowHeader: false,
     isAdminRoute: true,
   },
+
   {
     path: "*",
     page: NotFoundPage,
