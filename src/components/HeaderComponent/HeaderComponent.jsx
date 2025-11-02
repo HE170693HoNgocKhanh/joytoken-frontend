@@ -16,10 +16,15 @@ import {
 } from "./style";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import DrawerCart from "../ProductComponent/DrawerCart";
+import DrawerFavorite from "../ProductComponent/DrawerFavorite";
 const { Search } = Input;
 
 const Header = () => {
   const [categories, setCategories] = useState([]);
+  const [openDrawerCart, setOpenDrawerCart] = useState(false);
+  const [openDrawerFavorite, setOpenDrawerFavorite] = useState(false);
+
   const navigate = useNavigate();
 
   const token = localStorage.getItem("accessToken");
@@ -127,8 +132,11 @@ const Header = () => {
             </button>
           )}
 
-          <HeartOutlined style={{ fontSize: "22px", cursor: "pointer" }} />
-          <Badge count={2} size="small">
+          <HeartOutlined
+            style={{ fontSize: "22px", cursor: "pointer" }}
+            onClick={() => setOpenDrawerFavorite(true)}
+          />
+          <Badge count={2} size="small" onClick={() => setOpenDrawerCart(true)}>
             <ShoppingCartOutlined
               style={{ fontSize: "22px", cursor: "pointer" }}
             />
@@ -147,6 +155,16 @@ const Header = () => {
           </Menu.Item>
         ))}
       </WrapperMenu>
+      <DrawerCart
+        open={openDrawerCart}
+        onClose={() => setOpenDrawerCart(false)}
+        title="Cart"
+      />
+      <DrawerFavorite
+        open={openDrawerFavorite}
+        onClose={() => setOpenDrawerFavorite(false)}
+        title="Favorite"
+      />
     </WrapperHeader>
   );
 };
