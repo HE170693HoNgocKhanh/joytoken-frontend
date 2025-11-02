@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks";
 import {
   Container,
   LeftSection,
@@ -13,10 +15,11 @@ import {
 } from "./style";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+  const { login, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,37 +30,20 @@ const LoginPage = () => {
     }
 
     try {
-      setLoading(true);
       setError("");
 
-      const res = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Đăng nhập thất bại!");
-      }
-
-      // ✅ Lưu token vào localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      const response = await login({ email, password });
 
       alert("Đăng nhập thành công!");
-      if (data.user.role === "admin") {
-        window.location.href = "/admin/dashboard";
+      
+      // Điều hướng dựa trên role
+      if (response.user.role === "admin") {
+        navigate("/admin/dashboard");
       } else {
-        window.location.href = "/";
+        navigate("/");
       }
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setError(err.message || "Đăng nhập thất bại!");
     }
   };
 

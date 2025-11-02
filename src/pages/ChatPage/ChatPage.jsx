@@ -5,6 +5,7 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import ChatSidebar from "../../components/ChatComponent/ChatSidebar";
 import ChatWindow from "../../components/ChatComponent/ChatWindow";
+import { conversationService } from "../../services/conversationService";
 
 const socket = io("http://localhost:8080", { transports: ["websocket"] });
 
@@ -22,11 +23,8 @@ const ChatPage = () => {
   // 🟢 Fetch danh sách hội thoại
   const fetchConversations = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/conversations", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      const data = res.data.data || [];
+      const res = await conversationService.getConversations();
+      const data = res.data || [];
       const formatted = data.map((c) => {
         const otherUser =
           c.participants.find((p) => p._id !== currentUserId) || null;
@@ -40,19 +38,14 @@ const ChatPage = () => {
       setLoadingConversations(false);
     }
   };
-  console.log(selectedConversation);
 
   // 🟢 Fetch chi tiết 1 conversation
-  const fetchConversationData = async (conversationId, force = false) => {
-    if (!force && selectedConversation?._id === conversationId) return;
+  const fetchConversationData = async (conversationId) => {
     try {
-      const res = await axios.get(
-        `http://localhost:8080/api/conversations/${conversationId}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+      const res = await conversationService.getConversationDetails(
+        conversationId
       );
-      const { conversation, messages } = res.data.data;
+      const { conversation, messages } = res.data;
       setSelectedConversation(conversation);
       setMessages(messages || []);
 
@@ -127,6 +120,18 @@ const ChatPage = () => {
     socket.emit("sendMessage", newMsg);
   };
 
+  const handleSendImage = (imageUrl) => {
+    if (!selectedConversation) return;
+
+    socket.emit("sendImageMessage", {
+      conversationId: selectedConversation._id,
+      senderId: currentUserId,
+      imageUrl,
+    });
+  };
+
+  console.log(messages);
+
   return (
     <Container>
       <ChatSidebar
@@ -140,6 +145,7 @@ const ChatPage = () => {
         conversation={selectedConversation}
         messages={messages}
         onSend={handleSendMessage}
+        onSendImage={handleSendImage}
       />
     </Container>
   );

@@ -3,7 +3,7 @@ import styled from "styled-components";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 
-const ChatWindow = ({ conversation, messages, onSend }) => {
+const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
   const currentUser = JSON.parse(localStorage.getItem("user"));
   const currentUserId = currentUser?.id;
   const messageEndRef = useRef(null);
@@ -41,7 +41,8 @@ const ChatWindow = ({ conversation, messages, onSend }) => {
               <ChatMessage
                 key={m._id}
                 message={{
-                  text: m.content,
+                  type: m.type,
+                  content: m.content,
                   sender: m.sender,
                   time: m.createdAt,
                 }}
@@ -53,7 +54,7 @@ const ChatWindow = ({ conversation, messages, onSend }) => {
         </div>
       </MessageArea>
 
-      <ChatInput onSend={onSend} />
+      <ChatInput onSend={onSend} onSendImage={onSendImage} />
     </Window>
   );
 };

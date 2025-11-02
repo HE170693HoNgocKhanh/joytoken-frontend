@@ -5,8 +5,11 @@ import {
   SmileOutlined,
   PaperClipOutlined,
 } from "@ant-design/icons";
+import { Upload, Button } from "antd";
+import axios from "axios";
+import { conversationService } from "../../services/conversationService";
 
-const ChatInput = ({ onSend }) => {
+const ChatInput = ({ onSend, onSendImage }) => {
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -14,11 +17,32 @@ const ChatInput = ({ onSend }) => {
     onSend(text);
     setText("");
   };
+  const handleUpload = async ({ file }) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await conversationService.uploadImage(formData);
+
+      if (res.imageUrl) {
+        onSendImage(res.imageUrl); // Gửi về ChatPage để emit socket
+      }
+    } catch (err) {
+      console.error("❌ Upload failed:", err);
+    }
+  };
 
   return (
     <Container>
       <div className="icons">
-        <PaperClipOutlined />
+        <Upload
+          showUploadList={false}
+          customRequest={handleUpload}
+          accept="image/*"
+          maxCount={1}
+        >
+          <PaperClipOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+        </Upload>
         {/* <SmileOutlined /> */}
       </div>
       <Input

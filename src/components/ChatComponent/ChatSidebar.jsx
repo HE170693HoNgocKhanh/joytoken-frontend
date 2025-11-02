@@ -48,7 +48,8 @@ const ChatSidebar = ({
                   {c.otherUser?.name || "Người dùng ẩn danh"}
                 </div>
                 <div className="last">
-                  {truncateText(c.lastMessage.content)}
+                  {truncateText(c?.lastMessage?.content) ||
+                    "Hãy bắt đầu cuộc trò chuyện"}
                 </div>
               </div>
               <div className="time">
