@@ -13,6 +13,11 @@ export const userService = {
     return response;
   },
 
+  updateByAdmin: async (id, data) => {
+    const response = await apiClient.put(`/users/update-by-admin/${id}`, data);
+    return response;
+  },
+
   // Upload avatar mới
   uploadAvatar: async (formData) => {
     const response = await apiClient.post("/users/profile/avatar", formData, {

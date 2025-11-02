@@ -22,10 +22,10 @@ import {
   UserOutlined,
   EditOutlined,
   DeleteOutlined,
-  PlusOutlined,
   ExportOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import "antd/dist/reset.css";
 import styled from "styled-components";
 import { userService } from "../../../services/userService";
 import dayjs from "dayjs";
@@ -53,6 +53,7 @@ const StatCard = styled(Card)`
 `;
 
 const UserManagement = () => {
+  const [messageApi, contextHolder] = message.useMessage(); // ✅ Ant Design v5 message hook
   const [users, setUsers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -65,10 +66,9 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const res = await userService.getAllUser();
-      console.log("📦 Lấy danh sách users từ API", res);
       setUsers(res?.data || res || []);
     } catch (err) {
-      message.error("Không thể tải danh sách người dùng");
+      messageApi.error("Không thể tải danh sách người dùng");
       console.error(err);
     } finally {
       setLoading(false);
@@ -87,8 +87,8 @@ const UserManagement = () => {
 
   const userStats = {
     total: users.length,
-    active: users.filter((u) => u.status === "active").length,
-    inactive: users.filter((u) => u.status === "inactive").length,
+    active: users.filter((u) => u.emailVerified === true).length,
+    inactive: users.filter((u) => u.emailVerified === false).length,
     admins: users.filter((u) => u.role === "admin").length,
   };
 
@@ -96,7 +96,10 @@ const UserManagement = () => {
     setEditingUser(user);
     setIsModalVisible(true);
     if (user) {
-      form.setFieldsValue(user);
+      form.setFieldsValue({
+        role: user.role,
+        emailVerified: user.emailVerified === true,
+      });
     } else {
       form.resetFields();
     }
@@ -112,22 +115,24 @@ const UserManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      const payload = {
+        role: values.role,
+        emailVerified: values.emailVerified === true,
+      };
 
       if (editingUser) {
-        // Cập nhật
-        await userService.updateUser(editingUser.id, values);
-        message.success("Cập nhật người dùng thành công");
+        await userService.updateByAdmin(editingUser._id, payload); // ✅ Gọi đúng API
+        messageApi.success("Cập nhật người dùng thành công");
       } else {
-        // Tạo mới
-        await userService.createUser(values);
-        message.success("Thêm người dùng mới thành công");
+        await userService.createUser(payload);
+        messageApi.success("Thêm người dùng mới thành công");
       }
 
       handleCancel();
       fetchUsers();
     } catch (err) {
       console.error(err);
-      message.error("Thao tác thất bại");
+      messageApi.error("Thao tác thất bại");
     }
   };
 
@@ -135,11 +140,11 @@ const UserManagement = () => {
   const handleDelete = async (userId) => {
     try {
       await userService.deleteUser(userId);
-      message.success("Xóa người dùng thành công");
+      messageApi.success("Xóa người dùng thành công");
       fetchUsers();
     } catch (err) {
       console.error(err);
-      message.error("Không thể xóa người dùng");
+      messageApi.error("Không thể xóa người dùng");
     }
   };
 
@@ -164,7 +169,7 @@ const UserManagement = () => {
       title: "Tên",
       dataIndex: "name",
       key: "name",
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      sorter: (a, b) => a.name?.localeCompare(b.name || ""),
     },
     {
       title: "Email",
@@ -193,16 +198,16 @@ const UserManagement = () => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "emailVerified",
+      key: "emailVerified",
       filters: [
-        { text: "Hoạt động", value: "active" },
-        { text: "Không hoạt động", value: "inactive" },
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
       ],
-      onFilter: (value, record) => record.status === value,
-      render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Hoạt động" : "Không hoạt động"}
+      onFilter: (value, record) => record.emailVerified === value,
+      render: (verified) => (
+        <Tag color={verified ? "green" : "red"}>
+          {verified ? "Hoạt động" : "Không hoạt động"}
         </Tag>
       ),
     },
@@ -237,7 +242,7 @@ const UserManagement = () => {
           />
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa user này?"
-            onConfirm={() => handleDelete(record.id)}
+            onConfirm={() => handleDelete(record._id)} // ✅ _id
             okText="Có"
             cancelText="Không"
           >
@@ -250,6 +255,7 @@ const UserManagement = () => {
 
   return (
     <div>
+      {contextHolder}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <Title level={2}>Quản lý User</Title>
@@ -315,9 +321,6 @@ const UserManagement = () => {
           </Space>
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Excel</Button>
-            {/* <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-              Thêm User
-            </Button> */}
           </Space>
         </div>
 
@@ -325,7 +328,7 @@ const UserManagement = () => {
           <Table
             columns={columns}
             dataSource={filteredUsers}
-            rowKey="id"
+            rowKey="_id" // ✅ dùng _id để đồng bộ với MongoDB
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
@@ -350,41 +353,6 @@ const UserManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="name"
-                label="Tên"
-                rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
-                ]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="Số điện thoại"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số điện thoại!" },
-                ]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="role"
                 label="Vai trò"
                 rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
@@ -392,21 +360,26 @@ const UserManagement = () => {
                 <Select>
                   <Option value="customer">Khách hàng</Option>
                   <Option value="admin">Admin</Option>
+                  <Option value="seller">Nhân viên bán hàng</Option>
+                  <Option value="staff">Nhân viên vận hành</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="emailVerified"
+                label="Trạng thái"
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái!" },
+                ]}
+              >
+                <Select>
+                  <Option value={true}>Hoạt động</Option>
+                  <Option value={false}>Không hoạt động</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-          >
-            <Select>
-              <Option value="active">Hoạt động</Option>
-              <Option value="inactive">Không hoạt động</Option>
-            </Select>
-          </Form.Item>
         </Form>
       </Modal>
     </div>
