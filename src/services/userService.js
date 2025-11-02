@@ -42,4 +42,13 @@ export const userService = {
     const response = await apiClient.get("/users/get-all");
     return response;
   },
+
+  getDashboardStatistics: async () => {
+    const response = await apiClient.get("/users/statistics");
+    return response;
+  },
+  getDailyRevenue: async (date) => {
+    const response = await apiClient.get(`/users/revenue/daily?date=${date}`);
+    return response;
+  },
 };

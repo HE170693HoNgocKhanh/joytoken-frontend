@@ -187,15 +187,40 @@ const UserManagement = () => {
       key: "role",
       filters: [
         { text: "Admin", value: "admin" },
-        { text: "Customer", value: "customer" },
+        { text: "Khách hàng", value: "customer" },
+        { text: "Nhân viên vận hành", value: "staff" },
+        { text: "Nhân viên bán hàng", value: "seller" },
       ],
       onFilter: (value, record) => record.role === value,
-      render: (role) => (
-        <Tag color={role === "admin" ? "red" : "blue"}>
-          {role === "admin" ? "Admin" : "Khách hàng"}
-        </Tag>
-      ),
+      render: (role) => {
+        let color = "default";
+        let label = "";
+
+        switch (role) {
+          case "admin":
+            color = "red";
+            label = "Admin";
+            break;
+          case "customer":
+            color = "blue";
+            label = "Khách hàng";
+            break;
+          case "staff":
+            color = "purple";
+            label = "Nhân viên vận hành";
+            break;
+          case "seller":
+            color = "green";
+            label = "Nhân viên bán hàng";
+            break;
+          default:
+            label = role;
+        }
+
+        return <Tag color={color}>{label}</Tag>;
+      },
     },
+
     {
       title: "Trạng thái",
       dataIndex: "emailVerified",

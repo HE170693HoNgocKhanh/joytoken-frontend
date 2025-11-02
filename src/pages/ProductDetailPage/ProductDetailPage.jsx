@@ -37,7 +37,7 @@ const ProductDetailPage = () => {
   const [reviews, setReviews] = useState([]);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
-  // const [images, setImages] = useState([]);
+  const [images, setImages] = useState([]);
   const [mainImage, setMainImage] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -113,7 +113,6 @@ const ProductDetailPage = () => {
 
     fetchData();
   }, [id]);
-  const images = product?.variants.map((item) => item.image);
 
   // ----- Thêm vào giỏ hàng -----
   const handleAddToCart = () => {
