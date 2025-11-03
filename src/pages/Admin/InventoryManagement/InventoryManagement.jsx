@@ -29,6 +29,7 @@ import {
   ExportOutlined,
 } from "@ant-design/icons";
 import styled from "styled-components";
+import "antd/dist/reset.css";
 import { inventoryService } from "../../../services/inventoryService";
 import { productService } from "../../../services/productService";
 
@@ -53,6 +54,7 @@ const AlertCard = styled(Card)`
 `;
 
 const InventoryManagement = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [products, setProducts] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [isStockModalVisible, setIsStockModalVisible] = useState(false);
@@ -63,8 +65,7 @@ const InventoryManagement = () => {
   const [loading, setLoading] = useState(false);
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState([]);
-
-  const token = localStorage.getItem("token");
+  const [submitting, setSubmitting] = useState(false);
 
   // --- Fetch products ---
   useEffect(() => {
@@ -75,6 +76,7 @@ const InventoryManagement = () => {
     try {
       setLoading(true);
       const res = await productService.getAllProducts();
+      console.log("Fetched products:", res.data);
       const inventoryWithStatus = res.data.map((product) => {
         const minStock = product.minStock ?? 5;
         let status = "in_stock";
@@ -96,7 +98,7 @@ const InventoryManagement = () => {
       setProducts(res.data);
     } catch (err) {
       console.error(err);
-      message.error("Không thể tải danh sách sản phẩm!");
+      messageApi.error("Không thể tải danh sách sản phẩm!");
     } finally {
       setLoading(false);
     }
@@ -116,11 +118,24 @@ const InventoryManagement = () => {
       currency: "VND",
     }).format(amount);
 
-  const showStockModal = (item, action) => {
-    setSelectedItem(item);
-    setStockAction(action);
-    setIsStockModalVisible(true);
-    form.resetFields();
+  const showStockModal = async (item, action) => {
+    try {
+      setStockAction(action);
+      form.resetFields();
+
+      // ✅ Gọi API lấy chi tiết sản phẩm để có variants
+      const res = await productService.getProductById(item.productId);
+      if (!res || !res.data) {
+        messageApi.error("Không thể tải chi tiết sản phẩm!");
+        return;
+      }
+
+      setSelectedItem(res.data);
+      setIsStockModalVisible(true);
+    } catch (err) {
+      console.error(err);
+      messageApi.error("Không thể mở form nhập/xuất kho!");
+    }
   };
 
   const showHistoryModal = async (item) => {
@@ -133,7 +148,7 @@ const InventoryManagement = () => {
       setIsHistoryModalVisible(true);
     } catch (err) {
       console.error(err);
-      message.error("Không thể tải lịch sử kho");
+      messageApi.error("Không thể tải lịch sử kho");
     }
   };
 
@@ -147,35 +162,53 @@ const InventoryManagement = () => {
     setIsStockModalVisible(false);
     setSelectedItem(null);
     form.resetFields();
+    setSubmitting(false);
   };
 
-  const handleStockSubmit = async () => {
+  const handleStockSubmit = async (values, variantKey, variantName) => {
     try {
-      const values = await form.validateFields();
-      const { quantity, reason } = values;
+      setSubmitting(true);
+      const quantity = values[`quantity_${variantKey}`];
+      const reason = values[`reason_${variantKey}`];
+
+      if (!quantity) {
+        return messageApi.warning("Vui lòng nhập số lượng!");
+      }
+
+      const variantId = variantKey.startsWith("default_") ? null : variantKey;
+
+      const payload = {
+        productId: selectedItem._id,
+        variantId,
+        quantity,
+        note: reason,
+      };
+
+      console.log("Payload:", payload);
 
       if (stockAction === "in") {
-        await inventoryService.importStock(
-          { productId: selectedItem.productId, quantity, note: reason },
-          token
+        await inventoryService.importStock(payload);
+        messageApi.success(
+          `✅ Nhập kho thành công: ${quantity} sản phẩm ${
+            variantName ? `(${variantName})` : ""
+          }`
         );
       } else {
-        await inventoryService.exportStock(
-          { productId: selectedItem.productId, quantity, note: reason },
-          token
+        await inventoryService.exportStock(payload);
+        messageApi.success(
+          `📦 Xuất kho thành công: ${quantity} sản phẩm ${
+            variantName ? `(${variantName})` : ""
+          }`
         );
       }
 
-      message.success(
-        stockAction === "in"
-          ? `Đã nhập kho ${quantity} sản phẩm`
-          : `Đã xuất kho ${quantity} sản phẩm`
-      );
       fetchProducts();
       handleStockCancel();
     } catch (err) {
       console.error(err);
-      message.error("Thao tác kho thất bại");
+      messageApi.error("❌ Thao tác kho thất bại");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -321,6 +354,7 @@ const InventoryManagement = () => {
 
   return (
     <div>
+      {contextHolder}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <Title level={2}>Quản lý Kho</Title>
@@ -581,66 +615,136 @@ const InventoryManagement = () => {
       </Modal>
 
       <Modal
-        title={
-          stockAction === "in"
-            ? `Nhập kho - ${selectedItem?.productName}`
-            : `Xuất kho - ${selectedItem?.productName}`
-        }
+        title={`${stockAction === "in" ? "Nhập kho" : "Xuất kho"} - ${
+          selectedItem?.name || ""
+        }`}
         open={isStockModalVisible}
-        onOk={handleStockSubmit}
         onCancel={handleStockCancel}
-        okText={stockAction === "in" ? "Nhập kho" : "Xuất kho"}
-        cancelText="Hủy"
+        footer={null}
+        width={500}
       >
-        {selectedItem && (
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Tồn kho hiện tại: </Text>
-            <Text>{selectedItem.currentStock}</Text>
-          </div>
-        )}
-        <Form form={form} layout="vertical" name="stockForm">
-          <Form.Item
-            name="quantity"
-            label="Số lượng"
-            rules={[
-              { required: true, message: "Vui lòng nhập số lượng!" },
-              { type: "number", min: 1, message: "Số lượng phải lớn hơn 0!" },
-            ]}
-          >
-            <InputNumber
-              style={{ width: "100%" }}
-              min={1}
-              max={
-                stockAction === "out" ? selectedItem?.availableStock : undefined
-              }
-            />
-          </Form.Item>
-          <Form.Item
-            name="reason"
-            label="Lý do"
-            rules={[{ required: true, message: "Vui lòng nhập lý do!" }]}
-          >
-            <Select placeholder="Chọn lý do">
-              {stockAction === "in" ? (
-                <>
-                  <Option value="purchase">Nhập hàng từ nhà cung cấp</Option>
-                  <Option value="return">Trả hàng từ khách hàng</Option>
-                  <Option value="adjustment">Điều chỉnh tồn kho</Option>
-                  <Option value="other">Khác</Option>
-                </>
-              ) : (
-                <>
-                  <Option value="sale">Bán hàng</Option>
-                  <Option value="damage">Hàng hỏng</Option>
-                  <Option value="loss">Mất hàng</Option>
-                  <Option value="adjustment">Điều chỉnh tồn kho</Option>
-                  <Option value="other">Khác</Option>
-                </>
-              )}
-            </Select>
-          </Form.Item>
-        </Form>
+        <Tabs type="card">
+          {(selectedItem?.variants && selectedItem.variants.length > 0
+            ? selectedItem.variants
+            : [{ name: "Không có variant" }]
+          ).map((variant, index) => {
+            const variantName =
+              variant.name ||
+              [variant.size, variant.color].filter(Boolean).join(" - ") ||
+              "Không có variant";
+            const variantKey = variant._id || `default_${index}`;
+
+            return (
+              <TabPane tab={variantName} key={variantKey}>
+                {/* ✅ Tồn kho hiện tại */}
+                <div
+                  style={{
+                    background: "#f9fafc",
+                    border: "1px solid #f0f0f0",
+                    borderRadius: 8,
+                    padding: "12px 16px",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Typography.Text strong>Tồn kho hiện tại: </Typography.Text>
+                  <Typography.Text
+                    style={{
+                      color:
+                        (variant.countInStock ?? 0) <= 5
+                          ? "#ff4d4f"
+                          : (variant.countInStock ?? 0) <= 20
+                          ? "#faad14"
+                          : "#52c41a",
+                    }}
+                  >
+                    {variant.countInStock ?? 0} sản phẩm
+                  </Typography.Text>
+                </div>
+
+                {/* ✅ Form nhập/xuất */}
+                <Form
+                  form={form}
+                  layout="vertical"
+                  name={`stockForm_${variantKey}`}
+                  onFinish={(values) =>
+                    handleStockSubmit(values, variantKey, variantName)
+                  }
+                >
+                  <Form.Item
+                    name={`quantity_${variantKey}`}
+                    label="Số lượng"
+                    rules={[
+                      { required: true, message: "Vui lòng nhập số lượng!" },
+                      {
+                        type: "number",
+                        min: 1,
+                        message: "Số lượng phải lớn hơn 0!",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={1}
+                      max={
+                        stockAction === "out"
+                          ? variant.countInStock ?? selectedItem?.countInStock
+                          : undefined
+                      }
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name={`reason_${variantKey}`}
+                    label="Lý do"
+                    rules={[
+                      { required: true, message: "Vui lòng chọn lý do!" },
+                    ]}
+                  >
+                    <Select placeholder="Chọn lý do">
+                      {stockAction === "in" ? (
+                        <>
+                          <Select.Option value="Nhập hàng từ NCC">
+                            Nhập hàng từ NCC
+                          </Select.Option>
+                          <Select.Option value="Khách trả hàng">
+                            Khách trả hàng
+                          </Select.Option>
+                          <Select.Option value="Điều chỉnh tồn kho">
+                            Điều chỉnh tồn kho
+                          </Select.Option>
+                          <Select.Option value="Khác">Khác</Select.Option>
+                        </>
+                      ) : (
+                        <>
+                          <Select.Option value="Bán hàng">Bán hàng</Select.Option>
+                          <Select.Option value="Hàng hỏng">
+                            Hàng hỏng
+                          </Select.Option>
+                          <Select.Option value="Mất hàng">Mất hàng</Select.Option>
+                          <Select.Option value="Điều chỉnh tồn kho">
+                            Điều chỉnh tồn kho
+                          </Select.Option>
+                          <Select.Option value="Khác">Khác</Select.Option>
+                        </>
+                      )}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item>
+                    <Space>
+                      <Button type="primary" htmlType="submit" loading={submitting}>
+                        {stockAction === "in" ? "Nhập kho" : "Xuất kho"}
+                      </Button>
+                      <Button onClick={handleStockCancel}>Hủy</Button>
+                    </Space>
+                  </Form.Item>
+                </Form>
+              </TabPane>
+            );
+          })}
+        </Tabs>
       </Modal>
+
       <style jsx>{`
         .row-out-of-stock {
           background-color: #fff2f0;
