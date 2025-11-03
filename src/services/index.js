@@ -4,6 +4,7 @@ export { productService } from './productService';
 export { categoryService } from './categoryService';
 export { orderService } from './orderService';
 export { userService } from "./userService";
+export { inventoryService } from './inventoryService';
 
 // Export apiClient để sử dụng trực tiếp nếu cần
 export { default as apiClient } from './apiClient';
