@@ -188,6 +188,11 @@ const OrderPage = () => {
 
       // === Trường hợp PayOS ===
       if (paymentMethod === "PayOS" && result.payOS?.checkoutUrl) {
+        // Clear các item đã mua trước khi redirect
+        const remainingCart = cart.filter((item) => !item.selected);
+        localStorage.setItem("cart", JSON.stringify(remainingCart));
+        window.dispatchEvent(new Event("cartUpdated"));
+
         message.info("Đang chuyển hướng đến PayOS để thanh toán...");
         localStorage.setItem("pendingOrderId", orderId); // để markPaid sau khi redirect về
         // Thêm query param orderId để fetch fallback nếu localStorage mất

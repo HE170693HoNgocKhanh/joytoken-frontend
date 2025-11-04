@@ -39,7 +39,7 @@ const OrderSuccess = () => {
     localStorage.getItem("lastOrderId") ||
     orderIdFromQuery;
 
-  // Fetch order nếu chưa có
+  // Fetch order nếu chưa có và xóa cart cho COD
   useEffect(() => {
     const fetchOrder = async () => {
       if (!order && pendingOrderId) {
@@ -48,6 +48,22 @@ const OrderSuccess = () => {
           const res = await orderService.getOrderById(pendingOrderId);
           if (res.success) {
             setOrder(res.data);
+            
+            // Nếu là COD và chưa xóa cart, xóa cart ngay
+            if (res.data.paymentMethod === "COD") {
+              const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+              const orderProductIds = res.data.items.map(item => item.productId?._id || item.productId);
+              const remainingCart = cart.filter((item) => {
+                const itemProductId = item.id || item.productId;
+                return !orderProductIds.some(orderId => {
+                  const orderIdStr = typeof orderId === 'object' ? orderId.toString() : orderId;
+                  const itemIdStr = itemProductId?.toString();
+                  return orderIdStr === itemIdStr;
+                });
+              });
+              localStorage.setItem("cart", JSON.stringify(remainingCart));
+              window.dispatchEvent(new Event("cartUpdated"));
+            }
           } else {
             setError(res.message || "Không thể tải thông tin đơn hàng");
           }
@@ -62,7 +78,7 @@ const OrderSuccess = () => {
     fetchOrder();
   }, [pendingOrderId, order]);
 
-  // Nếu là PayOS: markPaid tự động
+  // Nếu là PayOS: markPaid tự động và xóa cart
   useEffect(() => {
     const markPaid = async () => {
       if (!order || !pendingOrderId) return;
@@ -77,6 +93,23 @@ const OrderSuccess = () => {
         };
         const res = await orderService.updateOrderToPaid(pendingOrderId, data);
         console.log("✅ Thanh toán hoàn tất:", res);
+        
+        // Xóa cart sau khi thanh toán thành công
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        // Xóa các item đã được đặt hàng (có thể dựa vào order items)
+        const orderProductIds = order.items.map(item => item.productId?._id || item.productId);
+        const remainingCart = cart.filter((item) => {
+          // Nếu item không có trong order thì giữ lại
+          const itemProductId = item.id || item.productId;
+          return !orderProductIds.some(orderId => {
+            const orderIdStr = typeof orderId === 'object' ? orderId.toString() : orderId;
+            const itemIdStr = itemProductId?.toString();
+            return orderIdStr === itemIdStr;
+          });
+        });
+        localStorage.setItem("cart", JSON.stringify(remainingCart));
+        window.dispatchEvent(new Event("cartUpdated"));
+        
         localStorage.removeItem("pendingOrderId");
       } catch (err) {
         console.error("❌ Lỗi khi cập nhật thanh toán:", err);
