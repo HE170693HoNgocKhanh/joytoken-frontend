@@ -8,7 +8,6 @@ import {
   CreditCardOutlined,
   WalletOutlined,
   BankOutlined,
-  MobileOutlined,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
 import {
@@ -19,7 +18,6 @@ import {
   SectionTitle,
   FormGroup,
   Input,
-  Select,
   TextArea,
   PaymentMethodGroup,
   PaymentOption,
@@ -43,7 +41,7 @@ const OrderPage = () => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Form state
+  // 🧾 Form state
   const [shippingAddress, setShippingAddress] = useState({
     fullName: "",
     email: "",
@@ -52,25 +50,27 @@ const OrderPage = () => {
     city: "",
     district: "",
     ward: "",
+    country: "Vietnam",
+    postalCode: "700000",
   });
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer"); // cod, bank_transfer, momo
 
-  // Tính toán prices
+  // ⚙️ Default payment method → PAYOS cho đúng enum backend
+  const [paymentMethod, setPaymentMethod] = useState("PayOS");
+
+  // 💰 Tính toán giá
   const selectedItems = cart.filter((item) => item.selected);
   const itemsPrice = selectedItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
     0
   );
-  const taxPrice = itemsPrice * 0.1; // 10% VAT
-  const shippingPrice = 30000; // Phí vận chuyển cố định
+  const taxPrice = itemsPrice * 0.1;
+  const shippingPrice = 3000;
   const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
-  // Load cart từ localStorage
+  // 🛒 Load cart
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("cart") || "[]");
     setCart(saved);
-
-    // Nếu không có item nào được chọn, redirect về cart
     const selected = saved.filter((item) => item.selected);
     if (selected.length === 0) {
       message.warning("Vui lòng chọn sản phẩm để thanh toán");
@@ -78,7 +78,7 @@ const OrderPage = () => {
     }
   }, [navigate]);
 
-  // Load thông tin user nếu có
+  // 👤 Load user info nếu có
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     if (user) {
@@ -98,13 +98,12 @@ const OrderPage = () => {
     }));
   };
 
-  // Cập nhật số lượng sản phẩm trong cart
+  // 🔁 Update số lượng sản phẩm
   const updateQuantity = (itemId, variantId, newQuantity) => {
     const maxStock =
       cart.find(
         (item) => item.id === itemId && item.selectedVariant?._id === variantId
       )?.selectedVariant?.countInStock || 999;
-
     const quantity = Math.max(1, Math.min(newQuantity, maxStock));
 
     const updatedCart = cart.map((item) =>
@@ -118,10 +117,10 @@ const OrderPage = () => {
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
+  // 🧾 Gửi đơn hàng
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validation
+  
     if (
       !shippingAddress.fullName ||
       !shippingAddress.phone ||
@@ -130,17 +129,16 @@ const OrderPage = () => {
       message.error("Vui lòng điền đầy đủ thông tin giao hàng");
       return;
     }
-
+  
     if (selectedItems.length === 0) {
       message.error("Giỏ hàng trống");
       navigate("/cart");
       return;
     }
-
+  
     try {
       setLoading(true);
-
-      // Format items theo API
+  
       const items = selectedItems.map((item) => ({
         productId: item.id,
         name: item.name,
@@ -155,8 +153,12 @@ const OrderPage = () => {
             }
           : null,
       }));
-
-      // Gọi API tạo order (giữ nguyên format API hiện tại)
+  
+      // ✅ Thêm returnUrl/cancelUrl nếu cần customize (optional, backend dùng default)
+      const currentDomain = window.location.origin;  // e.g., http://localhost:3000
+      const returnUrl = `${currentDomain}/payment/success`;
+      const cancelUrl = `${currentDomain}/payment/cancel`;
+  
       const result = await orderService.createOrder({
         items,
         shippingAddress,
@@ -165,27 +167,29 @@ const OrderPage = () => {
         taxPrice,
         shippingPrice,
         totalPrice,
+        returnUrl,  // Pass từ FE nếu muốn override backend default
+        cancelUrl,
       });
-
+  
       if (result.success) {
-        message.success(
-          result.discountApplied
-            ? result.message ||
-                "Đặt hàng thành công — Voucher 10% đã được áp dụng!"
-            : "Đặt hàng thành công!"
-        );
-
-        // Xóa các items đã đặt hàng khỏi cart
+        message.success(result.message || "Đặt hàng thành công!");
+  
+        // 🔄 Xóa item đã đặt khỏi cart (giữ nguyên, nhưng với PayOS có thể delay đến webhook)
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));
         window.dispatchEvent(new Event("cartUpdated"));
-
-        // Redirect đến trang order detail hoặc order list
+  
         const orderId = result.data?._id;
-        if (orderId) {
-          navigate(`/order/${orderId}`);
+  
+        // ✅ Conditional redirect dựa trên PayOS
+        if (result.payOS && result.payOS.checkoutUrl) {
+          // PayOS: Redirect external đến checkout (mở tab hiện tại hoặc mới)
+          window.location.href = result.payOS.checkoutUrl;  // Hoặc window.open(result.payOS.checkoutUrl, '_blank');
+          // Optional: Lưu orderId để sync sau (e.g., khi callback success)
+          localStorage.setItem('pendingOrderId', orderId);
         } else {
-          navigate("/order");
+          // COD/other: Navigate internal đến order detail
+          navigate(orderId ? `/order/${orderId}` : "/order");
         }
       } else {
         message.error(result.message || "Đặt hàng thất bại");
@@ -196,6 +200,7 @@ const OrderPage = () => {
         error.message ||
           (typeof error === "string" ? error : "Có lỗi xảy ra khi đặt hàng")
       );
+      // ✅ Với PayOS fail, backend rollback → Không clear cart ở đây (đã handle trong try)
     } finally {
       setLoading(false);
     }
@@ -227,13 +232,14 @@ const OrderPage = () => {
           Thanh toán
         </h1>
       </div>
+
       <CheckoutWrapper>
         <LeftSection>
           <form
             onSubmit={handleSubmit}
             style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
           >
-            {/* Contact Information */}
+            {/* 🧍‍♂️ Thông tin liên hệ */}
             <SectionCard>
               <SectionTitle>
                 <IconWrapper>
@@ -251,7 +257,6 @@ const OrderPage = () => {
                       handleInputChange("fullName", e.target.value)
                     }
                     required
-                    placeholder="Nhập họ và tên của bạn"
                   />
                 </FormGroup>
 
@@ -262,23 +267,21 @@ const OrderPage = () => {
                     value={shippingAddress.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     required
-                    placeholder="Nhập số điện thoại của bạn"
                   />
                 </FormGroup>
 
                 <FormGroup style={{ gridColumn: "1 / -1" }}>
-                  <label>Địa chỉ email</label>
+                  <label>Email</label>
                   <Input
                     type="email"
                     value={shippingAddress.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="Nhập địa chỉ email của bạn"
                   />
                 </FormGroup>
               </FormGrid>
             </SectionCard>
 
-            {/* Shipping Address */}
+            {/* 🚚 Địa chỉ giao hàng */}
             <SectionCard>
               <SectionTitle>
                 <IconWrapper>
@@ -286,16 +289,17 @@ const OrderPage = () => {
                 </IconWrapper>
                 Địa chỉ giao hàng
               </SectionTitle>
+
               <FormGroup>
                 <label>Địa chỉ *</label>
                 <TextArea
                   value={shippingAddress.address}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   required
-                  placeholder="Nhập địa chỉ đầy đủ của bạn"
                   rows={3}
                 />
               </FormGroup>
+
               <FormGrid>
                 <FormGroup>
                   <label>Tỉnh/Thành phố *</label>
@@ -304,7 +308,6 @@ const OrderPage = () => {
                     value={shippingAddress.city}
                     onChange={(e) => handleInputChange("city", e.target.value)}
                     required
-                    placeholder="Ví dụ: Hồ Chí Minh"
                   />
                 </FormGroup>
 
@@ -317,7 +320,6 @@ const OrderPage = () => {
                       handleInputChange("district", e.target.value)
                     }
                     required
-                    placeholder="Ví dụ: Quận 1"
                   />
                 </FormGroup>
 
@@ -328,13 +330,37 @@ const OrderPage = () => {
                     value={shippingAddress.ward}
                     onChange={(e) => handleInputChange("ward", e.target.value)}
                     required
-                    placeholder="Ví dụ: Phường Bến Nghé"
+                  />
+                </FormGroup>
+              </FormGrid>
+
+              {/* ➕ Thêm country và postalCode */}
+              <FormGrid>
+                <FormGroup>
+                  <label>Quốc gia *</label>
+                  <Input
+                    type="text"
+                    value={shippingAddress.country}
+                    onChange={(e) => handleInputChange("country", e.target.value)}
+                    required
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <label>Mã bưu điện *</label>
+                  <Input
+                    type="text"
+                    value={shippingAddress.postalCode}
+                    onChange={(e) =>
+                      handleInputChange("postalCode", e.target.value)
+                    }
+                    required
                   />
                 </FormGroup>
               </FormGrid>
             </SectionCard>
 
-            {/* Payment Method */}
+            {/* 💳 Phương thức thanh toán */}
             <SectionCard>
               <SectionTitle>
                 <IconWrapper>
@@ -344,38 +370,39 @@ const OrderPage = () => {
               </SectionTitle>
               <PaymentMethodGroup>
                 <PaymentOption
-                  active={paymentMethod === "bank_transfer"}
-                  onClick={() => setPaymentMethod("bank_transfer")}
+                  active={paymentMethod === "PayOS"}
+                  onClick={() => setPaymentMethod("PayOS")}
                 >
                   <input
                     type="radio"
-                    id="bank_transfer"
+                    id="payos"
                     name="paymentMethod"
-                    value="bank_transfer"
-                    checked={paymentMethod === "bank_transfer"}
+                    value="PAYOS"
+                    checked={paymentMethod === "PayOS"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   />
                   <div>
-                    <label htmlFor="bank_transfer">
+                    <label htmlFor="payos">
                       <span className="payment-icon">
                         <BankOutlined />
                       </span>
                       <span className="payment-label">Thanh toán PayOS</span>
                       <span className="payment-badge">Khả dụng</span>
                     </label>
-                    <p>Chuyển khoản trực tiếp vào tài khoản ngân hàng</p>
+                    <p>Chuyển khoản qua PayOS an toàn, tự động xác nhận</p>
                   </div>
                 </PaymentOption>
+
                 <PaymentOption
-                  active={paymentMethod === "cod"}
-                  onClick={() => setPaymentMethod("cod")}
+                  active={paymentMethod === "COD"}
+                  onClick={() => setPaymentMethod("COD")}
                 >
                   <input
                     type="radio"
                     id="cod"
                     name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
+                    value="COD"
+                    checked={paymentMethod === "COD"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   />
                   <div>
@@ -388,29 +415,26 @@ const OrderPage = () => {
                       </span>
                       <span className="payment-badge">Khả dụng</span>
                     </label>
-                    <p>Thanh toán khi bạn nhận được sản phẩm</p>
+                    <p>Thanh toán trực tiếp khi nhận được hàng</p>
                   </div>
                 </PaymentOption>
               </PaymentMethodGroup>
             </SectionCard>
 
-            {/* Submit Button */}
+            {/* 🟢 Submit */}
             <SectionCard style={{ marginTop: 0, padding: "1.5rem" }}>
               <ButtonGroup>
                 <BackButton type="button" onClick={() => navigate("/cart")}>
-                  <ArrowLeftOutlined />
-                  Quay lại giỏ hàng
+                  <ArrowLeftOutlined /> Quay lại giỏ hàng
                 </BackButton>
                 <SubmitButton type="submit" disabled={loading}>
                   {loading ? (
                     <>
-                      <LoadingSpinner />
-                      Đang xử lý đơn hàng...
+                      <LoadingSpinner /> Đang xử lý đơn hàng...
                     </>
                   ) : (
                     <>
-                      <CreditCardOutlined />
-                      Đặt hàng
+                      <CreditCardOutlined /> Đặt hàng
                     </>
                   )}
                 </SubmitButton>
@@ -419,80 +443,78 @@ const OrderPage = () => {
           </form>
         </LeftSection>
 
+        {/* 🧾 Tóm tắt đơn hàng */}
         <RightSection>
           <SectionTitle>Tóm tắt đơn hàng</SectionTitle>
           <OrderSummary>
-            {/* Order Items */}
-            <div className="order-items">
-              {selectedItems.map((item) => (
-                <OrderItem key={`${item.id}-${item.selectedVariant?._id}`}>
-                  <div className="item-image">
-                    <img
-                      src={item.selectedVariant?.image || item.image}
-                      alt={item.name}
-                      onError={(e) => {
-                        e.target.src = "/images/product-test.jpg";
-                      }}
-                    />
-                  </div>
-                  <div className="item-info">
-                    <div className="item-name">{item.name}</div>
-                    {item.selectedVariant && (
-                      <div className="item-variant">
-                        {item.selectedVariant.size} -{" "}
-                        {item.selectedVariant.color}
-                      </div>
-                    )}
-                    <div className="item-controls">
-                      <div className="quantity-controls">
-                        <button
-                          type="button"
-                          className="qty-btn minus"
-                          onClick={() =>
-                            updateQuantity(
-                              item.id,
-                              item.selectedVariant?._id,
-                              item.quantity - 1
-                            )
-                          }
-                          disabled={item.quantity <= 1}
-                        >
-                          −
-                        </button>
-                        <span className="qty-value">{item.quantity}</span>
-                        <button
-                          type="button"
-                          className="qty-btn plus"
-                          onClick={() =>
-                            updateQuantity(
-                              item.id,
-                              item.selectedVariant?._id,
-                              item.quantity + 1
-                            )
-                          }
-                          disabled={
-                            item.quantity >=
-                            (item.selectedVariant?.countInStock ||
-                              item.countInStock ||
-                              999)
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="item-price">
-                        ₫
-                        {(
-                          (item.price || 0) * (item.quantity || 1)
-                        ).toLocaleString()}
-                      </div>
+            {selectedItems.map((item) => (
+              <OrderItem key={`${item.id}-${item.selectedVariant?._id}`}>
+                <div className="item-image">
+                  <img
+                    src={item.selectedVariant?.image || item.image}
+                    alt={item.name}
+                    onError={(e) => {
+                      e.target.src = "/images/product-test.jpg";
+                    }}
+                  />
+                </div>
+                <div className="item-info">
+                  <div className="item-name">{item.name}</div>
+                  {item.selectedVariant && (
+                    <div className="item-variant">
+                      {item.selectedVariant.size} -{" "}
+                      {item.selectedVariant.color}
+                    </div>
+                  )}
+                  <div className="item-controls">
+                    <div className="quantity-controls">
+                      <button
+                        type="button"
+                        className="qty-btn minus"
+                        onClick={() =>
+                          updateQuantity(
+                            item.id,
+                            item.selectedVariant?._id,
+                            item.quantity - 1
+                          )
+                        }
+                        disabled={item.quantity <= 1}
+                      >
+                        −
+                      </button>
+                      <span className="qty-value">{item.quantity}</span>
+                      <button
+                        type="button"
+                        className="qty-btn plus"
+                        onClick={() =>
+                          updateQuantity(
+                            item.id,
+                            item.selectedVariant?._id,
+                            item.quantity + 1
+                          )
+                        }
+                        disabled={
+                          item.quantity >=
+                          (item.selectedVariant?.countInStock ||
+                            item.countInStock ||
+                            999)
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="item-price">
+                      ₫
+                      {(
+                        (item.price || 0) * (item.quantity || 1)
+                      ).toLocaleString()}
                     </div>
                   </div>
-                </OrderItem>
-              ))}
-            </div>
+                </div>
+              </OrderItem>
+            ))}
 
-            {/* Pricing Breakdown */}
+            {/* Tổng giá */}
             <div className="pricing-breakdown">
               <SummaryRow>
                 <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
