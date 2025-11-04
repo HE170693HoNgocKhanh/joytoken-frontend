@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
   List,
@@ -17,55 +17,81 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import { orderService } from "../../services";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
 const OrderSuccess = () => {
-  const [error, setError] = useState(null);
-
   const location = useLocation();
   const navigate = useNavigate();
 
+  const user = JSON.parse(localStorage.getItem("user"));
+  const searchParams = new URLSearchParams(location.search);
+  const orderIdFromQuery = searchParams.get("orderId");
+
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const state = location.state; // Từ COD navigate (order data, paymentMethod)
+  // Lấy orderId fallback
+  const pendingOrderId =
+    localStorage.getItem("pendingOrderId") ||
+    localStorage.getItem("lastOrderId") ||
+    orderIdFromQuery;
 
+  // Fetch order nếu chưa có
   useEffect(() => {
-    const fetchPendingOrder = async () => {
-      const pendingOrderId = localStorage.getItem("pendingOrderId");
-
-      // Nếu có pendingOrderId mà chưa có order trong state → gọi BE để lấy chi tiết
-      if (pendingOrderId && !order) {
+    const fetchOrder = async () => {
+      if (!order && pendingOrderId) {
         try {
           setLoading(true);
-          const result = await orderService.getOrderById(pendingOrderId);
-          if (result.success) {
-            setOrder(result.data);
+          const res = await orderService.getOrderById(pendingOrderId);
+          if (res.success) {
+            setOrder(res.data);
           } else {
-            message.error(result.message || "Không thể tải thông tin đơn hàng");
+            setError(res.message || "Không thể tải thông tin đơn hàng");
           }
         } catch (err) {
-          console.error("❌ Lỗi khi tải đơn hàng:", err);
-          message.error("Không thể lấy thông tin đơn hàng");
+          console.error(err);
+          setError("Không thể lấy thông tin đơn hàng");
         } finally {
           setLoading(false);
-          localStorage.removeItem("pendingOrderId");
         }
       }
     };
+    fetchOrder();
+  }, [pendingOrderId, order]);
 
-    fetchPendingOrder();
-  }, [order]);
+  // Nếu là PayOS: markPaid tự động
+  useEffect(() => {
+    const markPaid = async () => {
+      if (!order || !pendingOrderId) return;
+      if (order.paymentMethod !== "PayOS") return;
+
+      try {
+        const data = {
+          id: pendingOrderId,
+          status: "COMPLETED",
+          update_time: dayjs().toISOString(),
+          email_address: user?.email,
+        };
+        const res = await orderService.updateOrderToPaid(pendingOrderId, data);
+        console.log("✅ Thanh toán hoàn tất:", res);
+        localStorage.removeItem("pendingOrderId");
+      } catch (err) {
+        console.error("❌ Lỗi khi cập nhật thanh toán:", err);
+      }
+    };
+    markPaid();
+  }, [order, pendingOrderId, user?.email]);
 
   const handleContinueShopping = () => {
     navigate("/");
-    localStorage.removeItem("pendingOrderId"); // Clear nếu có từ PayOS
+    localStorage.removeItem("pendingOrderId");
+    localStorage.removeItem("lastOrderId");
   };
 
-  const handleViewOrders = () => {
-    navigate("/order"); // Trang danh sách orders
-  };
+  const handleViewOrders = () => navigate("/order");
 
   if (loading) {
     return (

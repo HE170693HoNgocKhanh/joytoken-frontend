@@ -118,128 +118,116 @@ const OrderPage = () => {
   };
 
   // 🧾 Gửi đơn hàng
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // ✅ Kiểm tra thông tin giao hàng
-  if (
-    !shippingAddress.fullName ||
-    !shippingAddress.phone ||
-    !shippingAddress.address
-  ) {
-    message.error("Vui lòng điền đầy đủ thông tin giao hàng");
-    return;
-  }
+    // ✅ Kiểm tra thông tin giao hàng
+    if (
+      !shippingAddress.fullName ||
+      !shippingAddress.phone ||
+      !shippingAddress.address
+    ) {
+      message.error("Vui lòng điền đầy đủ thông tin giao hàng");
+      return;
+    }
 
-  // ✅ Kiểm tra giỏ hàng
-  if (selectedItems.length === 0) {
-    message.error("Giỏ hàng trống");
-    navigate("/cart");
-    return;
-  }
+    // ✅ Kiểm tra giỏ hàng
+    if (selectedItems.length === 0) {
+      message.error("Giỏ hàng trống");
+      navigate("/cart");
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // ✅ Chuẩn hóa items gửi lên BE
-    const items = selectedItems.map((item) => ({
-      productId: item.id,
-      name: item.name,
-      image: item.image,
-      price: item.price,
-      quantity: item.quantity,
-      variant: item.selectedVariant
-        ? {
-            size: item.selectedVariant.size,
-            color: item.selectedVariant.color,
-            _id: item.selectedVariant._id,
-          }
-        : null,
-    }));
+      // Chuẩn hóa items gửi lên backend
+      const items = selectedItems.map((item) => ({
+        productId: item.id,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        quantity: item.quantity,
+        variant: item.selectedVariant
+          ? {
+              size: item.selectedVariant.size,
+              color: item.selectedVariant.color,
+              _id: item.selectedVariant._id,
+            }
+          : null,
+      }));
 
-    // ✅ Xây dựng URL trả về
-    const currentDomain = window.location.origin;
-    const returnUrl = `${currentDomain}/order-success`;
-    const cancelUrl = `${currentDomain}/order-failure`;
+      const currentDomain = window.location.origin;
+      const returnUrl = `${currentDomain}/order-success`; // Sẽ thêm query param orderId nếu PayOS
+      const cancelUrl = `${currentDomain}/order-failure`;
 
-    // ✅ Gửi yêu cầu tạo đơn hàng
-    const result = await orderService.createOrder({
-      items,
-      shippingAddress,
-      paymentMethod,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
-      returnUrl,
-      cancelUrl,
-    });
+      const result = await orderService.createOrder({
+        items,
+        shippingAddress,
+        paymentMethod,
+        itemsPrice,
+        taxPrice,
+        shippingPrice,
+        totalPrice,
+        returnUrl,
+        cancelUrl,
+      });
 
-    console.log("🧾 Kết quả tạo đơn hàng:", result);
+      console.log("🧾 Kết quả tạo đơn hàng:", result);
 
-    if (result.success) {
-      message.success(result.message || "Đặt hàng thành công!");
-
-      const orderId = result.data?._id;
-
-      // ✅ Trường hợp PayOS
-      if (paymentMethod === "PayOS" && result.payOS?.checkoutUrl) {
-        message.info("Đang chuyển hướng đến PayOS để thanh toán...");
-
-        // Lưu orderId để hiển thị lại sau redirect từ PayOS
-        localStorage.setItem("pendingOrderId", orderId);
-
-        // ⚠️ Không clear giỏ hàng ngay, đợi thanh toán xong
-        window.location.href = result.payOS.checkoutUrl;
+      if (!result.success) {
+        message.error(result.message || "Đặt hàng thất bại");
+        navigate("/order-failure", { state: { error: result.message } });
         return;
       }
 
-      // ✅ Trường hợp COD
+      const orderId = result.data._id;
+
+      // ✅ Lưu orderId để hiển thị lại khi refresh page hoặc redirect từ PayOS
+      localStorage.setItem("lastOrderId", orderId);
+
+      // === Trường hợp PayOS ===
+      if (paymentMethod === "PayOS" && result.payOS?.checkoutUrl) {
+        message.info("Đang chuyển hướng đến PayOS để thanh toán...");
+        localStorage.setItem("pendingOrderId", orderId); // để markPaid sau khi redirect về
+        // Thêm query param orderId để fetch fallback nếu localStorage mất
+        const checkoutUrl = new URL(result.payOS.checkoutUrl);
+        checkoutUrl.searchParams.set("orderId", orderId);
+        window.location.href = checkoutUrl.toString();
+        return;
+      }
+
+      // === Trường hợp COD ===
       if (paymentMethod === "COD") {
+        // Clear các item đã mua
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));
         window.dispatchEvent(new Event("cartUpdated"));
 
         navigate("/order-success", {
-          state: {
-            order: result.data,
-            paymentMethod: "COD",
-          },
+          state: { order: result.data, paymentMethod: "COD" },
         });
         return;
       }
 
-      // ✅ Trường hợp khác (chưa hỗ trợ)
+      // === Trường hợp khác (chưa hỗ trợ) ===
       const remainingCart = cart.filter((item) => !item.selected);
       localStorage.setItem("cart", JSON.stringify(remainingCart));
       window.dispatchEvent(new Event("cartUpdated"));
-
       message.warning(
         `Phương thức "${paymentMethod}" chưa hỗ trợ đầy đủ. Đơn hàng đã được tạo.`
       );
-
       navigate("/order-success", {
-        state: {
-          order: result.data,
-          paymentMethod: paymentMethod || "Other",
-        },
+        state: { order: result.data, paymentMethod: paymentMethod || "Other" },
       });
-    } else {
-      message.error(result.message || "Đặt hàng thất bại");
-      navigate("/order-failure", { state: { error: result.message } });
+    } catch (error) {
+      console.error("❌ Lỗi đặt hàng:", error);
+      message.error(error.message || "Có lỗi xảy ra khi đặt hàng");
+      navigate("/order-failure", { state: { error: error.message } });
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("❌ Lỗi đặt hàng:", error);
-    message.error(
-      error.message ||
-        (typeof error === "string" ? error : "Có lỗi xảy ra khi đặt hàng")
-    );
-    navigate("/order-failure", { state: { error: error.message } });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   if (selectedItems.length === 0) {
     return (

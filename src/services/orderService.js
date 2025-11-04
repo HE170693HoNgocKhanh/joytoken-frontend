@@ -140,5 +140,14 @@ export const orderService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
+
+  updateOrderToPaid: async (orderId, paymentResult) => {
+    try {
+      const response = await apiClient.put(`/orders/${orderId}/pay`, paymentResult);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
