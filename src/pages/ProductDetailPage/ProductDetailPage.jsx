@@ -130,7 +130,8 @@ const ProductDetailPage = () => {
       image: mainImage || product.image,
       price: selectedVariant.price || product.price,
       selectedVariant,
-      quantity: 1,
+      variants: product.variants || [], // Thêm variants để có thể thay đổi sau
+      quantity: quantity, // Sử dụng quantity state đã chọn
       selected: false,
     };
 
@@ -141,12 +142,14 @@ const ProductDetailPage = () => {
     );
 
     if (existingIndex !== -1) {
-      cart[existingIndex].quantity += 1;
+      cart[existingIndex].quantity += quantity; // Cộng thêm quantity đã chọn
     } else {
       cart.push(newItem);
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
+    // Dispatch event để HeaderComponent cập nhật số lượng
+    window.dispatchEvent(new Event("cartUpdated"));
     setMessage("🛍️ Đã thêm sản phẩm vào giỏ hàng!");
     setTimeout(() => setMessage(null), 2000);
   };

@@ -34,6 +34,8 @@ const CartPage = () => {
   const persist = (next) => {
     setCart(next);
     localStorage.setItem("cart", JSON.stringify(next));
+    // Dispatch event để HeaderComponent cập nhật số lượng
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   const toggleSelectAll = () => {
@@ -51,15 +53,21 @@ const CartPage = () => {
     persist(next);
   };
 
-  const updateQty = (id, qty) => {
+  const updateQty = (id, variantId, qty) => {
     const next = cart.map((i) =>
-      i.id === id ? { ...i, quantity: Math.max(1, qty) } : i
+      i.id === id && i.selectedVariant?._id === variantId
+        ? { ...i, quantity: Math.max(1, qty) }
+        : i
     );
     persist(next);
   };
 
   // ✅ Đã fix chuẩn theo logic bạn yêu cầu
-  const updateVariant = (productId, currentVariantId, newVariantName) => {
+  const updateVariant = (
+    productId,
+    currentVariantId,
+    newVariantDisplayName
+  ) => {
     const nextCart = cart.map((item) => ({
       ...item,
       variants: [...item.variants],
@@ -77,8 +85,9 @@ const CartPage = () => {
 
     const currentItem = nextCart[currentIndex];
 
+    // Tìm variant theo format "size - color"
     const newVariant = currentItem.variants.find(
-      (v) => v.name === newVariantName
+      (v) => `${v.size} - ${v.color}` === newVariantDisplayName
     );
     if (!newVariant) return;
 
@@ -184,7 +193,9 @@ const CartPage = () => {
             onToggle={() =>
               toggleSelectItem(item.id, item.selectedVariant?._id)
             }
-            onQtyChange={(q) => updateQty(item.id, q)}
+            onQtyChange={(q) =>
+              updateQty(item.id, item.selectedVariant?._id, q)
+            }
             onVariantChange={(v) =>
               updateVariant(item.id, item.selectedVariant?._id, v)
             }
@@ -209,10 +220,7 @@ const CartPage = () => {
             Tổng cộng ({cart.filter((i) => i.selected).length} sp):{" "}
             <strong>₫{total.toLocaleString()}</strong>
           </div>
-          <BuyButton
-            disabled={total === 0}
-            onClick={() => navigate("/checkout")}
-          >
+          <BuyButton disabled={total === 0} onClick={() => navigate("/order")}>
             Mua hàng
           </BuyButton>
         </FooterRight>

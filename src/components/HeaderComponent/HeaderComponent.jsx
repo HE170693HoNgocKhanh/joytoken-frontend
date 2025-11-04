@@ -24,6 +24,7 @@ const Header = () => {
   const [categories, setCategories] = useState([]);
   const [openDrawerCart, setOpenDrawerCart] = useState(false);
   const [openDrawerFavorite, setOpenDrawerFavorite] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const navigate = useNavigate();
 
@@ -45,6 +46,41 @@ const Header = () => {
     };
 
     fetchCategories();
+  }, []);
+
+  // Cập nhật số lượng giỏ hàng từ localStorage
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const totalItems = cart.reduce(
+        (sum, item) => sum + (item.quantity || 1),
+        0
+      );
+      setCartCount(totalItems);
+    };
+
+    // Cập nhật ngay lập tức
+    updateCartCount();
+
+    // Lắng nghe sự kiện storage để cập nhật khi cart thay đổi
+    const handleStorageChange = (e) => {
+      if (e.key === "cart") {
+        updateCartCount();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Custom event để cập nhật khi cart thay đổi trong cùng tab
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
   }, []);
 
   const onSearch = (value) => {
@@ -136,7 +172,11 @@ const Header = () => {
             style={{ fontSize: "22px", cursor: "pointer" }}
             onClick={() => setOpenDrawerFavorite(true)}
           />
-          <Badge count={2} size="small" onClick={() => setOpenDrawerCart(true)}>
+          <Badge
+            count={cartCount}
+            size="small"
+            onClick={() => setOpenDrawerCart(true)}
+          >
             <ShoppingCartOutlined
               style={{ fontSize: "22px", cursor: "pointer" }}
             />

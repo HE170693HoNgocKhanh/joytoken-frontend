@@ -56,10 +56,15 @@ const CartItem = ({
 
           <div className="variantRow" style={{ marginTop: "4px" }}>
             <SmallSelect
-              value={selectedVariant?.name || ""}
+              value={
+                selectedVariant
+                  ? `${selectedVariant.size} - ${selectedVariant.color}`
+                  : ""
+              }
               onChange={(e) => onVariantChange(e.target.value)}
             >
               {variants?.map((v, i) => {
+                const variantName = `${v.size} - ${v.color}`;
                 const isTaken = cart.some(
                   (c) =>
                     c.id === item.id &&
@@ -70,12 +75,14 @@ const CartItem = ({
                 return (
                   <option
                     key={i}
-                    value={v.name}
-                    disabled={v.stock === 0 || isTaken}
-                    style={v.stock === 0 || isTaken ? { color: "#999" } : {}}
+                    value={variantName}
+                    disabled={v.countInStock === 0 || isTaken}
+                    style={
+                      v.countInStock === 0 || isTaken ? { color: "#999" } : {}
+                    }
                   >
-                    {v.name}
-                    {v.stock === 0
+                    {variantName}
+                    {v.countInStock === 0
                       ? " (Hết hàng)"
                       : isTaken
                       ? " (Đã có trong giỏ)"

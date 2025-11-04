@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Drawer, Button, InputNumber, message } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router";
 
 const DrawerCart = ({ open, onClose, title = "Giỏ hàng của bạn" }) => {
   const [cart, setCart] = useState([]);
+  const navigate = useNavigate();
 
   // ✅ Lấy cart từ localStorage
   useEffect(() => {
@@ -15,6 +17,8 @@ const DrawerCart = ({ open, onClose, title = "Giỏ hàng của bạn" }) => {
   const persist = (next) => {
     setCart(next);
     localStorage.setItem("cart", JSON.stringify(next));
+    // Dispatch event để HeaderComponent cập nhật số lượng
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   // ✅ Thay đổi số lượng
@@ -62,9 +66,8 @@ const DrawerCart = ({ open, onClose, title = "Giỏ hàng của bạn" }) => {
           <strong>Tổng cộng: ₫{total.toLocaleString()}</strong>
           <Button
             type="primary"
-            onClick={() => message.info("Đi đến thanh toán...")}
-          >
-            Thanh toán
+            onClick={() => navigate("/cart")}>        
+            Đi đến giỏ hàng
           </Button>
         </div>
       }
@@ -100,7 +103,10 @@ const DrawerCart = ({ open, onClose, title = "Giỏ hàng của bạn" }) => {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600 }}>{item.name}</div>
               <div style={{ color: "#666", fontSize: 13 }}>
-                Biến thể: {item.selectedVariant?.name}
+                Biến thể:{" "}
+                {item.selectedVariant
+                  ? `${item.selectedVariant.size} - ${item.selectedVariant.color}`
+                  : "N/A"}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Button
