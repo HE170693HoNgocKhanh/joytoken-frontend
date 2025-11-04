@@ -13,6 +13,8 @@ import UserManagement from "../pages/Admin/UserManagement/UserManagement";
 import ProductManagement from "../pages/Admin/ProductManagement/ProductManagement";
 import CategoryManagement from "../pages/Admin/CategoryManagement/CategoryManagement";
 import InventoryManagement from "../pages/Admin/InventoryManagement/InventoryManagement";
+import OrderSuccess from "../pages/Order-Success/Order-Success";
+import OrderFailure from "../pages/OrderFailure/Order-Failure";
 export const routes = [
   {
     path: "/",
@@ -42,6 +44,16 @@ export const routes = [
   {
     path: "/cart",
     page: CartPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/order-success",
+    page: OrderSuccess,
+    isShowHeader: true,
+  },
+  {
+    path: "/order-failure",
+    page: OrderFailure,
     isShowHeader: true,
   },
   {
@@ -91,40 +103,40 @@ export const routes = [
     isShowHeader: true,
   },
   // Admin Routes
-  
+
   {
     path: "/admin/dashboard",
     page: Dashboard,
     isShowHeader: false,
-    isAdminRoute: true
+    isAdminRoute: true,
   },
   {
     path: "/admin/users",
     page: UserManagement,
     isShowHeader: false,
-    isAdminRoute: true
+    isAdminRoute: true,
   },
   {
     path: "/admin/products",
     page: ProductManagement,
     isShowHeader: false,
-    isAdminRoute: true
+    isAdminRoute: true,
   },
   {
     path: "/admin/categories",
     page: CategoryManagement,
     isShowHeader: false,
-    isAdminRoute: true
+    isAdminRoute: true,
   },
   {
     path: "/admin/inventory",
     page: InventoryManagement,
     isShowHeader: false,
-    isAdminRoute: true
+    isAdminRoute: true,
   },
   {
     path: "*",
     page: NotFoundPage,
-    isShowHeader: true
+    isShowHeader: true,
   },
 ];

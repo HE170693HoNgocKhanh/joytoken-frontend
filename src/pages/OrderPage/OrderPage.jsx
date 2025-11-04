@@ -118,93 +118,128 @@ const OrderPage = () => {
   };
 
   // 🧾 Gửi đơn hàng
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    if (
-      !shippingAddress.fullName ||
-      !shippingAddress.phone ||
-      !shippingAddress.address
-    ) {
-      message.error("Vui lòng điền đầy đủ thông tin giao hàng");
-      return;
-    }
-  
-    if (selectedItems.length === 0) {
-      message.error("Giỏ hàng trống");
-      navigate("/cart");
-      return;
-    }
-  
-    try {
-      setLoading(true);
-  
-      const items = selectedItems.map((item) => ({
-        productId: item.id,
-        name: item.name,
-        image: item.image,
-        price: item.price,
-        quantity: item.quantity,
-        variant: item.selectedVariant
-          ? {
-              size: item.selectedVariant.size,
-              color: item.selectedVariant.color,
-              _id: item.selectedVariant._id,
-            }
-          : null,
-      }));
-  
-      // ✅ Thêm returnUrl/cancelUrl nếu cần customize (optional, backend dùng default)
-      const currentDomain = window.location.origin;  // e.g., http://localhost:3000
-      const returnUrl = `${currentDomain}/payment/success`;
-      const cancelUrl = `${currentDomain}/payment/cancel`;
-  
-      const result = await orderService.createOrder({
-        items,
-        shippingAddress,
-        paymentMethod,
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
-        totalPrice,
-        returnUrl,  // Pass từ FE nếu muốn override backend default
-        cancelUrl,
-      });
-  
-      if (result.success) {
-        message.success(result.message || "Đặt hàng thành công!");
-  
-        // 🔄 Xóa item đã đặt khỏi cart (giữ nguyên, nhưng với PayOS có thể delay đến webhook)
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // ✅ Kiểm tra thông tin giao hàng
+  if (
+    !shippingAddress.fullName ||
+    !shippingAddress.phone ||
+    !shippingAddress.address
+  ) {
+    message.error("Vui lòng điền đầy đủ thông tin giao hàng");
+    return;
+  }
+
+  // ✅ Kiểm tra giỏ hàng
+  if (selectedItems.length === 0) {
+    message.error("Giỏ hàng trống");
+    navigate("/cart");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // ✅ Chuẩn hóa items gửi lên BE
+    const items = selectedItems.map((item) => ({
+      productId: item.id,
+      name: item.name,
+      image: item.image,
+      price: item.price,
+      quantity: item.quantity,
+      variant: item.selectedVariant
+        ? {
+            size: item.selectedVariant.size,
+            color: item.selectedVariant.color,
+            _id: item.selectedVariant._id,
+          }
+        : null,
+    }));
+
+    // ✅ Xây dựng URL trả về
+    const currentDomain = window.location.origin;
+    const returnUrl = `${currentDomain}/order-success`;
+    const cancelUrl = `${currentDomain}/order-failure`;
+
+    // ✅ Gửi yêu cầu tạo đơn hàng
+    const result = await orderService.createOrder({
+      items,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      totalPrice,
+      returnUrl,
+      cancelUrl,
+    });
+
+    console.log("🧾 Kết quả tạo đơn hàng:", result);
+
+    if (result.success) {
+      message.success(result.message || "Đặt hàng thành công!");
+
+      const orderId = result.data?._id;
+
+      // ✅ Trường hợp PayOS
+      if (paymentMethod === "PayOS" && result.payOS?.checkoutUrl) {
+        message.info("Đang chuyển hướng đến PayOS để thanh toán...");
+
+        // Lưu orderId để hiển thị lại sau redirect từ PayOS
+        localStorage.setItem("pendingOrderId", orderId);
+
+        // ⚠️ Không clear giỏ hàng ngay, đợi thanh toán xong
+        window.location.href = result.payOS.checkoutUrl;
+        return;
+      }
+
+      // ✅ Trường hợp COD
+      if (paymentMethod === "COD") {
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));
         window.dispatchEvent(new Event("cartUpdated"));
-  
-        const orderId = result.data?._id;
-  
-        // ✅ Conditional redirect dựa trên PayOS
-        if (result.payOS && result.payOS.checkoutUrl) {
-          // PayOS: Redirect external đến checkout (mở tab hiện tại hoặc mới)
-          window.location.href = result.payOS.checkoutUrl;  // Hoặc window.open(result.payOS.checkoutUrl, '_blank');
-          // Optional: Lưu orderId để sync sau (e.g., khi callback success)
-          localStorage.setItem('pendingOrderId', orderId);
-        } else {
-          // COD/other: Navigate internal đến order detail
-          navigate(orderId ? `/order/${orderId}` : "/order");
-        }
-      } else {
-        message.error(result.message || "Đặt hàng thất bại");
+
+        navigate("/order-success", {
+          state: {
+            order: result.data,
+            paymentMethod: "COD",
+          },
+        });
+        return;
       }
-    } catch (error) {
-      console.error("Lỗi đặt hàng:", error);
-      message.error(
-        error.message ||
-          (typeof error === "string" ? error : "Có lỗi xảy ra khi đặt hàng")
+
+      // ✅ Trường hợp khác (chưa hỗ trợ)
+      const remainingCart = cart.filter((item) => !item.selected);
+      localStorage.setItem("cart", JSON.stringify(remainingCart));
+      window.dispatchEvent(new Event("cartUpdated"));
+
+      message.warning(
+        `Phương thức "${paymentMethod}" chưa hỗ trợ đầy đủ. Đơn hàng đã được tạo.`
       );
-      // ✅ Với PayOS fail, backend rollback → Không clear cart ở đây (đã handle trong try)
-    } finally {
-      setLoading(false);
+
+      navigate("/order-success", {
+        state: {
+          order: result.data,
+          paymentMethod: paymentMethod || "Other",
+        },
+      });
+    } else {
+      message.error(result.message || "Đặt hàng thất bại");
+      navigate("/order-failure", { state: { error: result.message } });
     }
-  };
+  } catch (error) {
+    console.error("❌ Lỗi đặt hàng:", error);
+    message.error(
+      error.message ||
+        (typeof error === "string" ? error : "Có lỗi xảy ra khi đặt hàng")
+    );
+    navigate("/order-failure", { state: { error: error.message } });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (selectedItems.length === 0) {
     return (
@@ -341,7 +376,9 @@ const OrderPage = () => {
                   <Input
                     type="text"
                     value={shippingAddress.country}
-                    onChange={(e) => handleInputChange("country", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("country", e.target.value)
+                    }
                     required
                   />
                 </FormGroup>
@@ -462,8 +499,7 @@ const OrderPage = () => {
                   <div className="item-name">{item.name}</div>
                   {item.selectedVariant && (
                     <div className="item-variant">
-                      {item.selectedVariant.size} -{" "}
-                      {item.selectedVariant.color}
+                      {item.selectedVariant.size} - {item.selectedVariant.color}
                     </div>
                   )}
                   <div className="item-controls">
