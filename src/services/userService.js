@@ -51,4 +51,9 @@ export const userService = {
     const response = await apiClient.get(`/users/revenue/daily?date=${date}`);
     return response;
   },
+
+  deleteUser: async (id) => {
+    const response = await apiClient.delete(`/users/${id}`);
+    return response;
+  },
 };

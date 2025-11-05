@@ -15,6 +15,7 @@ import CategoryManagement from "../pages/Admin/CategoryManagement/CategoryManage
 import InventoryManagement from "../pages/Admin/InventoryManagement/InventoryManagement";
 import OrderSuccess from "../pages/Order-Success/Order-Success";
 import OrderFailure from "../pages/OrderFailure/Order-Failure";
+import OrderHistory from "../pages/OrderHistory/OrderHistory";
 export const routes = [
   {
     path: "/",
@@ -54,6 +55,11 @@ export const routes = [
   {
     path: "/order-failure",
     page: OrderFailure,
+    isShowHeader: true,
+  },
+  {
+    path: "/order-history",
+    page: OrderHistory,
     isShowHeader: true,
   },
   {

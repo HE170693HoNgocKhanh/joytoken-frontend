@@ -17,6 +17,7 @@ import {
   Col,
   Statistic,
   Spin,
+  DatePicker,
 } from "antd";
 import {
   UserOutlined,
@@ -31,9 +32,13 @@ import { userService } from "../../../services/userService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -60,6 +65,7 @@ const UserManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState([null, null]);
 
   // 📦 Lấy danh sách users từ API
   const fetchUsers = async () => {
@@ -79,11 +85,19 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(
-    (user) =>
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
       user.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchText.toLowerCase())
-  );
+      user.email?.toLowerCase().includes(searchText.toLowerCase());
+
+    const matchesDate =
+      !dateRange || dateRange.length !== 2 || !user.createdAt
+        ? true // nếu chưa chọn ngày thì mặc định match tất cả
+        : dayjs(user.createdAt).isSameOrAfter(dateRange[0], "day") &&
+          dayjs(user.createdAt).isSameOrBefore(dateRange[1], "day");
+
+    return matchesSearch && matchesDate;
+  });
 
   const userStats = {
     total: users.length,
@@ -342,6 +356,10 @@ const UserManagement = () => {
               style={{ width: 300 }}
               onSearch={setSearchText}
               onChange={(e) => setSearchText(e.target.value)}
+            />
+            <DatePicker.RangePicker
+              format="DD/MM/YYYY"
+              onChange={(dates) => setDateRange(dates)}
             />
           </Space>
           <Space>

@@ -30,6 +30,8 @@ import {
 } from "@ant-design/icons";
 import styled from "styled-components";
 import "antd/dist/reset.css";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { inventoryService } from "../../../services/inventoryService";
 import { productService } from "../../../services/productService";
 
@@ -245,6 +247,47 @@ const InventoryManagement = () => {
     (i) => i.status === "low_stock" || i.status === "out_of_stock"
   );
 
+  const exportHistoryToExcel = () => {
+  if (!selectedHistory || selectedHistory.length === 0) {
+    messageApi.warning("Không có dữ liệu để xuất!");
+    return;
+  }
+
+  // Nhóm theo product + variant
+  const grouped = selectedHistory.reduce((acc, h) => {
+    const variantKey = h.variant
+      ? h.variant.name ||
+        `${h.variant.size ?? ""} - ${h.variant.color ?? ""}`.trim()
+      : "Không có variant";
+
+    if (!acc[variantKey]) acc[variantKey] = [];
+    acc[variantKey].push({
+      Loại: h.type === "import" ? "Nhập kho" : "Xuất kho",
+      "Số lượng": h.quantity,
+      "Tồn sau": h.stockAfter,
+      "Ghi chú": h.note,
+      "Ngày": new Date(h.date).toLocaleString("vi-VN"),
+      "Đơn hàng": h.orderInfo?.orderId || "-",
+      "Khách hàng": h.orderInfo?.customerName || "-",
+      "Địa chỉ": h.orderInfo?.address || "-",
+      "SĐT": h.orderInfo?.phone || "-",
+      "Trạng thái đơn": h.orderInfo?.status || "-",
+    });
+    return acc;
+  }, {} );
+
+  // Tạo workbook
+  const wb = XLSX.utils.book_new();
+
+  Object.entries(grouped).forEach(([variantName, data]) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, variantName.slice(0, 31)); // tên sheet max 31 ký tự
+  });
+
+  // Xuất file
+  XLSX.writeFile(wb, `Inventory_History_${selectedItem?.productName || "product"}.xlsx`);
+};
+
   const columns = [
     {
       title: "Sản phẩm",
@@ -459,10 +502,13 @@ const InventoryManagement = () => {
         open={isHistoryModalVisible}
         onCancel={handleHistoryCancel}
         footer={[
-          <Button key="close" type="primary" onClick={handleHistoryCancel}>
-            Đóng
-          </Button>,
-        ]}
+    <Button key="export" onClick={exportHistoryToExcel} type="primary">
+      Xuất Excel
+    </Button>,
+    <Button key="close" type="default" onClick={handleHistoryCancel}>
+      Đóng
+    </Button>,
+  ]}
         width={1200}
         bodyStyle={{ padding: "16px 24px" }}
       >

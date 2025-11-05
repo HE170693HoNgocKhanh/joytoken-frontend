@@ -14,6 +14,9 @@ import {
   Image,
   Descriptions,
   Divider,
+  Space,
+  Select,
+  Alert,
 } from "antd";
 import {
   UserOutlined,
@@ -30,13 +33,17 @@ import {
   CalendarOutlined,
   CreditCardOutlined,
   TruckOutlined,
+  EyeOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
+import "antd/dist/reset.css";
 import { userService } from "../../../services/userService";
 import { orderService } from "../../../services";
 import styled from "styled-components";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { useNavigate } from "react-router";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -103,6 +110,8 @@ const ProductImage = styled(Image)`
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
+  const [messageApi, contextHolder] = message.useMessage();
+  const navigate = useNavigate();
   const [dailyRevenue, setDailyRevenue] = useState([]);
   const [dailySummary, setDailySummary] = useState(null);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -111,11 +120,45 @@ const Dashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  const [isEditStatusModalVisible, setIsEditStatusModalVisible] =
+    useState(false);
+  const [orderToEdit, setOrderToEdit] = useState(null);
+  const [newStatus, setNewStatus] = useState("Pending");
+
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(amount || 0);
+
+  const handleOpenEditStatusModal = (order) => {
+    setOrderToEdit(order);
+    setNewStatus(order.status); // mặc định status hiện tại
+    setIsEditStatusModalVisible(true);
+  };
+
+  const handleCloseEditStatusModal = () => {
+    setOrderToEdit(null);
+    setIsEditStatusModalVisible(false);
+  };
+  const handleUpdateOrderStatus = async () => {
+    if (!orderToEdit) return;
+
+    try {
+      const requestData = {
+        status: newStatus,
+        methodPayment: orderToEdit.paymentMethod,
+      };
+
+      await orderService.updateOrderStatus(orderToEdit.id, requestData);
+      messageApi.success("Cập nhật trạng thái thành công!");
+      handleCloseEditStatusModal();
+      fetchDailyRevenue(selectedDate); 
+    } catch (error) {
+      message.error("Cập nhật trạng thái thất bại!");
+      console.error(error);
+    }
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -259,7 +302,18 @@ const Dashboard = () => {
       title: "Hành động",
       key: "action",
       render: (_, record) => (
-        <a onClick={() => handleViewDetails(record)}>Xem chi tiết</a>
+        <Space>
+          {/* Icon xem chi tiết */}
+          <EyeOutlined
+            style={{ color: "#1890ff", fontSize: 18, cursor: "pointer" }}
+            onClick={() => handleViewDetails(record)}
+          />
+          {/* Nút chỉnh trạng thái */}
+          <EditOutlined
+            style={{ color: "#fa8c16", fontSize: 18, cursor: "pointer" }}
+            onClick={() => handleOpenEditStatusModal(record)}
+          />
+        </Space>
       ),
     },
   ];
@@ -275,11 +329,11 @@ const Dashboard = () => {
 
   return (
     <div>
-      {" "}
+      {contextHolder}
       <Title level={2}>Thống kê doanh thu</Title>
       {/* Tổng quan hệ thống */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={6} onClick={() => navigate("/admin/users")}>
           <StatCard>
             <Statistic
               title="Tổng Users"
@@ -289,7 +343,7 @@ const Dashboard = () => {
             />
           </StatCard>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={6} onClick={() => navigate("/admin/products")}>
           <StatCard>
             <Statistic
               title="Tổng Sản phẩm"
@@ -299,7 +353,12 @@ const Dashboard = () => {
             />
           </StatCard>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col
+          xs={24}
+          sm={12}
+          lg={6}
+          onClick={() => navigate("/admin/categories")}
+        >
           <StatCard>
             <Statistic
               title="Danh mục"
@@ -589,6 +648,76 @@ const Dashboard = () => {
             </div>
           )}
         </ModalContent>
+      </Modal>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Tag color="blue">#{orderToEdit?.id?.slice(-6)}</Tag>
+            <span style={{ fontSize: 16, fontWeight: 500 }}>
+              Chỉnh sửa trạng thái đơn hàng
+            </span>
+          </div>
+        }
+        open={isEditStatusModalVisible}
+        onCancel={handleCloseEditStatusModal}
+        onOk={handleUpdateOrderStatus}
+        okText="Cập nhật trạng thái"
+        cancelText="Hủy"
+        okButtonProps={{ type: "primary" }}
+        cancelButtonProps={{ type: "default" }}
+        width={400}
+        bodyStyle={{ padding: "24px 24px 16px" }}
+      >
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 500,
+                marginBottom: 8,
+                color: "#333",
+              }}
+            >
+              Trạng thái hiện tại:
+              <Tag color="default" style={{ marginLeft: 8, fontWeight: 600 }}>
+                {orderToEdit?.status || "N/A"}
+              </Tag>
+            </label>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: "block",
+                fontWeight: 500,
+                marginBottom: 8,
+                color: "#333",
+              }}
+            >
+              Chọn trạng thái mới:
+            </label>
+            <Select
+              value={newStatus}
+              onChange={(value) => setNewStatus(value)}
+              style={{ width: "100%" }}
+              placeholder="Chọn trạng thái"
+              size="large"
+            >
+              <Select.Option value="Pending">⏳ Chờ xử lý</Select.Option>
+              <Select.Option value="Processing">🔄 Đang xử lý</Select.Option>
+              <Select.Option value="Shipped">🚚 Đã giao hàng</Select.Option>
+              <Select.Option value="Delivered">✅ Hoàn thành</Select.Option>
+              <Select.Option value="Cancelled">❌ Đã hủy</Select.Option>
+            </Select>
+          </div>
+          {newStatus && orderToEdit?.status !== newStatus && (
+            <Alert
+              message="Thay đổi này sẽ cập nhật trạng thái đơn hàng ngay lập tức."
+              type="info"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
+          )}
+        </div>
       </Modal>
     </div>
   );

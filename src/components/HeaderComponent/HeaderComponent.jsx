@@ -104,9 +104,21 @@ const Header = () => {
         </a>
       ),
     },
-
     {
       key: "2",
+      label: (
+        <a
+          onClick={() => {
+            navigate("/order-history");
+          }}
+        >
+          History
+        </a>
+      ),
+    },
+
+    {
+      key: "3",
       danger: true,
       label: (
         <a
