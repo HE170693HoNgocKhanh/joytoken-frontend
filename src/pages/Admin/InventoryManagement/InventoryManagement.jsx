@@ -248,45 +248,48 @@ const InventoryManagement = () => {
   );
 
   const exportHistoryToExcel = () => {
-  if (!selectedHistory || selectedHistory.length === 0) {
-    messageApi.warning("Không có dữ liệu để xuất!");
-    return;
-  }
+    if (!selectedHistory || selectedHistory.length === 0) {
+      messageApi.warning("Không có dữ liệu để xuất!");
+      return;
+    }
 
-  // Nhóm theo product + variant
-  const grouped = selectedHistory.reduce((acc, h) => {
-    const variantKey = h.variant
-      ? h.variant.name ||
-        `${h.variant.size ?? ""} - ${h.variant.color ?? ""}`.trim()
-      : "Không có variant";
+    // Nhóm theo product + variant
+    const grouped = selectedHistory.reduce((acc, h) => {
+      const variantKey = h.variant
+        ? h.variant.name ||
+          `${h.variant.size ?? ""} - ${h.variant.color ?? ""}`.trim()
+        : "Không có variant";
 
-    if (!acc[variantKey]) acc[variantKey] = [];
-    acc[variantKey].push({
-      Loại: h.type === "import" ? "Nhập kho" : "Xuất kho",
-      "Số lượng": h.quantity,
-      "Tồn sau": h.stockAfter,
-      "Ghi chú": h.note,
-      "Ngày": new Date(h.date).toLocaleString("vi-VN"),
-      "Đơn hàng": h.orderInfo?.orderId || "-",
-      "Khách hàng": h.orderInfo?.customerName || "-",
-      "Địa chỉ": h.orderInfo?.address || "-",
-      "SĐT": h.orderInfo?.phone || "-",
-      "Trạng thái đơn": h.orderInfo?.status || "-",
+      if (!acc[variantKey]) acc[variantKey] = [];
+      acc[variantKey].push({
+        Loại: h.type === "import" ? "Nhập kho" : "Xuất kho",
+        "Số lượng": h.quantity,
+        "Tồn sau": h.stockAfter,
+        "Ghi chú": h.note,
+        Ngày: new Date(h.date).toLocaleString("vi-VN"),
+        "Đơn hàng": h.orderInfo?.orderId || "-",
+        "Khách hàng": h.orderInfo?.customerName || "-",
+        "Địa chỉ": h.orderInfo?.address || "-",
+        SĐT: h.orderInfo?.phone || "-",
+        "Trạng thái đơn": h.orderInfo?.status || "-",
+      });
+      return acc;
+    }, {});
+
+    // Tạo workbook
+    const wb = XLSX.utils.book_new();
+
+    Object.entries(grouped).forEach(([variantName, data]) => {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, variantName.slice(0, 31)); // tên sheet max 31 ký tự
     });
-    return acc;
-  }, {} );
 
-  // Tạo workbook
-  const wb = XLSX.utils.book_new();
-
-  Object.entries(grouped).forEach(([variantName, data]) => {
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, variantName.slice(0, 31)); // tên sheet max 31 ký tự
-  });
-
-  // Xuất file
-  XLSX.writeFile(wb, `Inventory_History_${selectedItem?.productName || "product"}.xlsx`);
-};
+    // Xuất file
+    XLSX.writeFile(
+      wb,
+      `Inventory_History_${selectedItem?.productName || "product"}.xlsx`
+    );
+  };
 
   const columns = [
     {
@@ -472,7 +475,6 @@ const InventoryManagement = () => {
             <Button icon={<SyncOutlined />} onClick={fetchProducts}>
               Đồng bộ
             </Button>
-            <Button icon={<ExportOutlined />}>Xuất Excel</Button>
           </Space>
         </div>
         <Table
@@ -502,13 +504,18 @@ const InventoryManagement = () => {
         open={isHistoryModalVisible}
         onCancel={handleHistoryCancel}
         footer={[
-    <Button key="export" onClick={exportHistoryToExcel} type="primary">
-      Xuất Excel
-    </Button>,
-    <Button key="close" type="default" onClick={handleHistoryCancel}>
-      Đóng
-    </Button>,
-  ]}
+          <Button
+            key="export"
+            onClick={exportHistoryToExcel}
+            type="primary"
+            icon={<ExportOutlined />}
+          >
+            Xuất Excel
+          </Button>,
+          <Button key="close" type="default" onClick={handleHistoryCancel}>
+            Đóng
+          </Button>,
+        ]}
         width={1200}
         bodyStyle={{ padding: "16px 24px" }}
       >
@@ -762,11 +769,15 @@ const InventoryManagement = () => {
                         </>
                       ) : (
                         <>
-                          <Select.Option value="Bán hàng">Bán hàng</Select.Option>
+                          <Select.Option value="Bán hàng">
+                            Bán hàng
+                          </Select.Option>
                           <Select.Option value="Hàng hỏng">
                             Hàng hỏng
                           </Select.Option>
-                          <Select.Option value="Mất hàng">Mất hàng</Select.Option>
+                          <Select.Option value="Mất hàng">
+                            Mất hàng
+                          </Select.Option>
                           <Select.Option value="Điều chỉnh tồn kho">
                             Điều chỉnh tồn kho
                           </Select.Option>
@@ -778,7 +789,11 @@ const InventoryManagement = () => {
 
                   <Form.Item>
                     <Space>
-                      <Button type="primary" htmlType="submit" loading={submitting}>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={submitting}
+                      >
                         {stockAction === "in" ? "Nhập kho" : "Xuất kho"}
                       </Button>
                       <Button onClick={handleStockCancel}>Hủy</Button>

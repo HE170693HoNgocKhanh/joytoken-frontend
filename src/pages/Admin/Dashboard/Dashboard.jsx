@@ -17,6 +17,7 @@ import {
   Space,
   Select,
   Alert,
+  Button,
 } from "antd";
 import {
   UserOutlined,
@@ -35,6 +36,7 @@ import {
   TruckOutlined,
   EyeOutlined,
   EditOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { userService } from "../../../services/userService";
@@ -44,6 +46,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useNavigate } from "react-router";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -153,7 +157,7 @@ const Dashboard = () => {
       await orderService.updateOrderStatus(orderToEdit.id, requestData);
       messageApi.success("Cập nhật trạng thái thành công!");
       handleCloseEditStatusModal();
-      fetchDailyRevenue(selectedDate); 
+      fetchDailyRevenue(selectedDate);
     } catch (error) {
       message.error("Cập nhật trạng thái thất bại!");
       console.error(error);
@@ -237,6 +241,47 @@ const Dashboard = () => {
   const handleCloseModal = () => {
     setSelectedOrder(null);
     setIsModalVisible(false);
+  };
+
+  const exportDailyRevenue = () => {
+    if (!dailyRevenue || dailyRevenue.length === 0) {
+      message.warning("Không có dữ liệu để xuất Excel.");
+      return;
+    }
+
+    // Chuyển đổi dữ liệu sang định dạng dễ đọc
+    const data = dailyRevenue.map((order) => ({
+      "Mã đơn hàng": `#${order.id.toString().slice(-6)}`,
+      "Khách hàng": order.customerName,
+      "Phương thức thanh toán": order.paymentMethod,
+      "Số lượng sản phẩm": order.totalItems,
+      "Tổng tiền": order.totalPrice,
+      "Trạng thái": order.status,
+      "Thanh toán": order.isPaid ? "Đã thanh toán" : "Chưa thanh toán",
+      "Ngày tạo": dayjs(order.createdAt)
+        .tz("Asia/Ho_Chi_Minh")
+        .format("DD/MM/YYYY HH:mm"),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Doanh thu ngày");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+
+    saveAs(
+      blob,
+      `Doanh_thu_${dayjs(selectedDate)
+        .tz("Asia/Ho_Chi_Minh")
+        .format("DDMMYYYY")}.xlsx`
+    );
   };
 
   const revenueColumns = [
@@ -391,12 +436,21 @@ const Dashboard = () => {
               </Title>
             </Col>
             <Col>
-              <DatePicker
-                value={selectedDate}
-                onChange={handleDateChange}
-                format="DD/MM/YYYY"
-                allowClear={false}
-              />
+              <Space>
+                <DatePicker
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  format="DD/MM/YYYY"
+                  allowClear={false}
+                />
+                <Button
+                  key="export"
+                  onClick={exportDailyRevenue}
+                  icon={<ExportOutlined />}
+                >
+                  Xuất Excel
+                </Button>
+              </Space>
             </Col>
           </Row>
         }
