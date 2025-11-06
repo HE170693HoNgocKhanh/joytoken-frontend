@@ -63,6 +63,7 @@ const LoginPage = () => {
             />
             <InputField
               type="password"
+              autoComplete="current-password"
               placeholder="Nhập mật khẩu"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

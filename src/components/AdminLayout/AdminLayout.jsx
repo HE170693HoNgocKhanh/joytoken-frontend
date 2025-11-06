@@ -18,6 +18,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
@@ -99,14 +100,38 @@ const AdminLayout = ({ children }) => {
       icon: <BarChartOutlined />,
       label: "Quản lý Kho",
     },
+    {
+      key: "/admin/orders",
+      icon: <ShoppingOutlined />,
+      label: "Quản lý Đơn hàng",
+    },
+    {
+      key: "/admin/exchanges",
+      icon: <SwapOutlined />,
+      label: "Quản lý Đổi hàng",
+    },
   ];
 
   const handleMenuClick = ({ key }) => {
     navigate(key);
   };
 
-  const handleLogout = () => {
-    // Implement logout logic here
+  const handleLogout = async () => {
+    // Clear tất cả localStorage
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    
+    // Clear cart và wishlist
+    localStorage.removeItem("cart");
+    localStorage.removeItem("wishlist");
+    localStorage.removeItem("wishlistIds");
+    
+    // Dispatch events
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("storage"));
+    
     navigate("/login");
   };
 

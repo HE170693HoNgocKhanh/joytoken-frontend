@@ -7,6 +7,24 @@ export const ProductGrid = styled.div`
   gap: 40px;
   padding: 40px 0;
 `;
+
+export const FilterContainer = styled.div`
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 0;
+  margin-bottom: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
+
+export const SortContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+export const FilterTagsContainer = styled.div`
+  padding: 12px 0;
+`;
 export const Card = styled.div`
   position: relative;
   width: 250px;
@@ -50,6 +68,25 @@ export const Label = styled.span`
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 8px;
+  z-index: 2;
+`;
+
+export const HeartButtonWrapper = styled.div`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: scale(1.1);
+  }
 `;
 
 export const Rating = styled.div`

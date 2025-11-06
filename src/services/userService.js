@@ -20,9 +20,8 @@ export const userService = {
 
   // Upload avatar mới
   uploadAvatar: async (formData) => {
-    const response = await apiClient.post("/users/profile/avatar", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Không set Content-Type, apiClient interceptor sẽ tự động xử lý FormData
+    const response = await apiClient.post("/users/profile/avatar", formData);
     return response;
   },
 
@@ -33,8 +32,8 @@ export const userService = {
   },
 
   // Xác minh email mới
-  verifyEmail: async (token) => {
-    const response = await apiClient.post("/users/verify-email", { token });
+  verifyEmailOtp: async (otp) => {
+    const response = await apiClient.post("/users/verify-email", { otp });
     return response;
   },
 
@@ -55,5 +54,16 @@ export const userService = {
   deleteUser: async (id) => {
     const response = await apiClient.delete(`/users/${id}`);
     return response;
+  },
+
+  // Wishlist
+  getWishlist: async () => {
+    return apiClient.get('/users/wishlist');
+  },
+  addToWishlist: async (productId) => {
+    return apiClient.post(`/users/wishlist/${productId}`);
+  },
+  removeFromWishlist: async (productId) => {
+    return apiClient.delete(`/users/wishlist/${productId}`);
   },
 };

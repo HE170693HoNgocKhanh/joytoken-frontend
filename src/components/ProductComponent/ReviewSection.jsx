@@ -36,14 +36,14 @@ const ReviewSection = ({ productId, initialReviews = [] }) => {
   return (
     <Container>
       <HeaderRow>
-        <Title level={3}>REVIEWS</Title>
+        <Title level={3}>Đánh giá</Title>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <StarFilled style={{ color: "#ff6b00", fontSize: 20 }} />
           <Text strong>
-            {averageRating} ({reviews.length} Reviews)
+            {averageRating} ({reviews.length} đánh giá)
           </Text>
           <Button type="link" onClick={() => setIsModalOpen(true)}>
-            Write a Review
+            Viết đánh giá
           </Button>
         </div>
       </HeaderRow>
@@ -85,11 +85,10 @@ const ReviewSection = ({ productId, initialReviews = [] }) => {
                       style={{ color: "#ff6b00" }}
                     />
                     <Text type="secondary">
-                      By
-                      {new Date(r.createdAt).toLocaleDateString("en-US", {
+                      {new Date(r.createdAt).toLocaleDateString("vi-VN", {
                         year: "numeric",
-                        month: "short",
-                        day: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
                       })}
                     </Text>
                   </div>
@@ -103,7 +102,7 @@ const ReviewSection = ({ productId, initialReviews = [] }) => {
 
       {/* Modal chứa form thêm review */}
       <Modal
-        title="Write a Review"
+        title="Viết đánh giá"
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}

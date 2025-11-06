@@ -16,6 +16,8 @@ import {
   List,
   Button,
   Spin,
+  message,
+  Empty,
 } from "antd";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -32,30 +34,65 @@ const OrderHistory = () => {
   const [ordersData, setOrdersData] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setIsLoading(true);
         const response = await orderService.getUserOrders();
-        setOrdersData(response.data);
+        // apiClient interceptor đã trả về response.data, nên response là { success: true, data: [...] }
+        if (response && response.success && response.data) {
+          setOrdersData(response.data);
+        } else if (Array.isArray(response)) {
+          // Nếu response là array trực tiếp
+          setOrdersData(response);
+        } else {
+          console.error("Unexpected response format:", response);
+          setOrdersData([]);
+        }
       } catch (error) {
         console.error("Error fetching orders:", error);
-      }finally {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể tải lịch sử đơn hàng. Vui lòng thử lại.";
+        message.error(errorMessage);
+        setError(errorMessage);
+        setOrdersData([]);
+      } finally {
         setIsLoading(false);
       }
     };
     fetchOrders();
   }, []);
 
- if (isLoading) {
+  // Thống kê tổng số đơn và tổng tiền
+  const totalOrders = ordersData?.length || 0;
+  const totalRevenue = ordersData?.reduce(
+    (acc, order) => acc + (order.totalPrice || 0),
+    0
+  ) || 0;
+
+  const filteredOrders = (ordersData || []).filter(
+    (order) =>
+      order.items?.some((item) =>
+        item.name?.toLowerCase().includes(searchText.toLowerCase())
+      ) ||
+      order.shippingAddress?.fullName
+        ?.toLowerCase()
+        .includes(searchText.toLowerCase())
+  );
+
+  if (isLoading) {
     return (
       <div
         style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "50vh",
+          minHeight: "50vh",
+          padding: "24px",
         }}
       >
         <Spin size="large" tip="Đang tải dữ liệu..." />
@@ -63,22 +100,63 @@ const OrderHistory = () => {
     );
   }
 
-  // Thống kê tổng số đơn và tổng tiền
-  const totalOrders = ordersData.length;
-  const totalRevenue = ordersData.reduce(
-    (acc, order) => acc + order.totalPrice,
-    0
-  );
-
-  const filteredOrders = ordersData.filter(
-    (order) =>
-      order.items.some((item) =>
-        item.name.toLowerCase().includes(searchText.toLowerCase())
-      ) ||
-      order.shippingAddress.fullName
-        .toLowerCase()
-        .includes(searchText.toLowerCase())
-  );
+  if (error && ordersData.length === 0) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+          padding: "24px",
+        }}
+      >
+        <Empty
+          description={error}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+        <Button
+          type="primary"
+          onClick={() => {
+            setError(null);
+            setIsLoading(true);
+            const fetchOrders = async () => {
+              try {
+                const response = await orderService.getUserOrders();
+                if (response && response.success && response.data) {
+                  setOrdersData(response.data);
+                } else if (Array.isArray(response)) {
+                  setOrdersData(response);
+                } else {
+                  setOrdersData([]);
+                }
+              } catch (err) {
+                console.error("Error fetching orders:", err);
+                message.error(
+                  err.response?.data?.message ||
+                    err.message ||
+                    "Không thể tải lịch sử đơn hàng. Vui lòng thử lại."
+                );
+                setError(
+                  err.response?.data?.message ||
+                    err.message ||
+                    "Không thể tải lịch sử đơn hàng. Vui lòng thử lại."
+                );
+                setOrdersData([]);
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            fetchOrders();
+          }}
+          style={{ marginTop: 16 }}
+        >
+          Thử lại
+        </Button>
+      </div>
+    );
+  }
 
   const columns = [
     {
@@ -109,9 +187,9 @@ const OrderHistory = () => {
       width: 300,
       render: (items) => (
         <div>
-          {items.slice(0, 2).map((item) => (
+          {items.slice(0, 2).map((item, index) => (
             <div
-              key={item._id}
+              key={item._id || item.productId?._id || index}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -390,7 +468,7 @@ const OrderHistory = () => {
   };
 
   return (
-    <div style={{ background: "#f0f2f5", padding: "24px", borderRadius: 12 }}>
+    <div style={{ background: "#f0f2f5", padding: "24px", borderRadius: 12, minHeight: "100vh" }}>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <Title level={2} style={{ margin: 0, color: "#262626" }}>
@@ -451,23 +529,31 @@ const OrderHistory = () => {
             Hiển thị {filteredOrders.length} / {totalOrders} đơn hàng
           </div>
         </div>
-        <Table
-          columns={columns}
-          dataSource={filteredOrders}
-          rowKey="_id"
-          pagination={{
-            pageSize: 5,
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-          bordered={false}
-          rowClassName={() => "ant-table-row-hover"}
-          onRow={(record) => ({
-            onClick: () => handleOrderClick(record),
-            style: { cursor: "pointer", background: "#fafafa" },
-          })}
-          scroll={{ x: 1000 }}
-        />
+        {filteredOrders.length === 0 && !isLoading ? (
+          <Empty
+            description="Chưa có đơn hàng nào"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={filteredOrders}
+            rowKey="_id"
+            pagination={{
+              pageSize: 5,
+              showSizeChanger: true,
+              showQuickJumper: true,
+            }}
+            bordered={false}
+            rowClassName={() => "ant-table-row-hover"}
+            onRow={(record) => ({
+              onClick: () => handleOrderClick(record),
+              style: { cursor: "pointer", background: "#fafafa" },
+            })}
+            scroll={{ x: 1000 }}
+            loading={isLoading}
+          />
+        )}
       </Card>
 
       {/* Modal chi tiết đơn hàng */}
@@ -481,10 +567,11 @@ const OrderHistory = () => {
         onCancel={() => setSelectedOrder(null)}
         footer={null}
         width={800}
-        bodyStyle={{ padding: "24px" }}
+        bodyStyle={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}
       >
         {selectedOrder && renderOrderDetails(selectedOrder)}
       </Modal>
+
     </div>
   );
 };

@@ -5,15 +5,17 @@ import {
   CartContainer,
   CartHeader,
   CartTable,
-  ControlsRow,
-  LeftControls,
-  RightControls,
+  TableHeader,
+  HeaderCol,
   DeleteButton,
   FooterBar,
   FooterLeft,
   FooterRight,
   BuyButton,
   EmptyBox,
+  VoucherSection,
+  VoucherItem,
+  VoucherLink,
 } from "./style.js";
 
 const CartPage = () => {
@@ -139,9 +141,41 @@ const CartPage = () => {
     persist(next);
   };
 
-  const total = cart
-    .filter((i) => i.selected)
-    .reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+  // Tính tổng số lượng sản phẩm đã chọn
+  const selectedItems = cart.filter((i) => i.selected);
+  const totalQuantity = selectedItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  
+  // Tính tổng tiền trước giảm giá
+  const subtotal = selectedItems.reduce(
+    (s, i) => s + (i.price || 0) * (i.quantity || 1),
+    0
+  );
+
+  // Tự động áp dụng voucher 5% nếu mua 3 sản phẩm trở lên (tối đa 10,000₫)
+  const hasVoucher = totalQuantity >= 3;
+  const discountAmount = hasVoucher ? Math.min(Math.round(subtotal * 0.05), 10000) : 0;
+  const total = subtotal - discountAmount;
+
+  // Hàm xử lý khi nhấn "Mua hàng"
+  const handleBuy = () => {
+    // Lưu thông tin voucher vào localStorage để trang Order sử dụng
+    const finalDiscountAmount = Math.min(discountAmount, 10000);
+    const orderData = {
+      selectedItems,
+      subtotal,
+      discountAmount: finalDiscountAmount,
+      total: subtotal - finalDiscountAmount,
+      hasVoucher,
+      voucherInfo: hasVoucher ? {
+        type: 'percentage',
+        value: 5,
+        maxDiscount: 10000,
+        applied: finalDiscountAmount
+      } : null
+    };
+    localStorage.setItem('orderData', JSON.stringify(orderData));
+    navigate("/order");
+  };
 
   if (!cart || cart.length === 0)
     return (
@@ -165,31 +199,20 @@ const CartPage = () => {
         </div>
       </CartHeader>
 
-      <ControlsRow>
-        <LeftControls>
-          <button
-            onClick={() => {
-              const next = cart.map((i) => ({ ...i, selected: true }));
-              persist(next);
-              setSelectAll(true);
-            }}
-          >
-            Chọn tất cả
-          </button>
-          <DeleteButton onClick={deleteSelected}>Xóa</DeleteButton>
-        </LeftControls>
-
-        <RightControls>
-          <div>🎟️ Shop Voucher</div>
-        </RightControls>
-      </ControlsRow>
+      <TableHeader>
+        <HeaderCol style={{ gridColumn: "1 / 3" }}>Sản Phẩm</HeaderCol>
+        <HeaderCol>Đơn Giá</HeaderCol>
+        <HeaderCol>Số Lượng</HeaderCol>
+        <HeaderCol>Số Tiền</HeaderCol>
+        <HeaderCol>Thao Tác</HeaderCol>
+      </TableHeader>
 
       <CartTable>
         {cart.map((item) => (
           <CartItem
             key={item.id + (item.selectedVariant?._id || "")}
             item={item}
-            cart={cart} // ✅ truyền thêm cart xuống
+            cart={cart}
             onToggle={() =>
               toggleSelectItem(item.id, item.selectedVariant?._id)
             }
@@ -204,6 +227,18 @@ const CartPage = () => {
         ))}
       </CartTable>
 
+      {hasVoucher && (
+        <VoucherSection>
+          <VoucherItem>
+            <span style={{ color: "#e74c3c", marginRight: "8px" }}>🎟️</span>
+            <span>Voucher 5% đã được áp dụng (Mua 3 sản phẩm trở lên, tối đa 10,000₫)</span>
+            <span style={{ color: "#28a745", fontWeight: 600 }}>
+              -₫{Math.min(discountAmount, 10000).toLocaleString()}
+            </span>
+          </VoucherItem>
+        </VoucherSection>
+      )}
+
       <FooterBar>
         <FooterLeft>
           <input
@@ -216,11 +251,25 @@ const CartPage = () => {
         </FooterLeft>
 
         <FooterRight>
-          <div>
-            Tổng cộng ({cart.filter((i) => i.selected).length} sp):{" "}
-            <strong>₫{total.toLocaleString()}</strong>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
+            {hasVoucher && (
+              <>
+                <div style={{ fontSize: "14px", color: "#666" }}>
+                  Tạm tính: <span>₫{subtotal.toLocaleString()}</span>
+                </div>
+                <div style={{ fontSize: "14px", color: "#28a745" }}>
+                  Giảm giá (5%, tối đa 10,000₫): <span>-₫{Math.min(discountAmount, 10000).toLocaleString()}</span>
+                </div>
+              </>
+            )}
+            <div style={{ fontSize: "16px", fontWeight: 600 }}>
+              Tổng cộng ({totalQuantity} sp):{" "}
+              <strong style={{ color: "#ff6b6b", fontSize: "20px" }}>
+                ₫{(subtotal - Math.min(discountAmount, 10000)).toLocaleString()}
+              </strong>
+            </div>
           </div>
-          <BuyButton disabled={total === 0} onClick={() => navigate("/order")}>
+          <BuyButton disabled={total === 0} onClick={handleBuy}>
             Mua hàng
           </BuyButton>
         </FooterRight>
