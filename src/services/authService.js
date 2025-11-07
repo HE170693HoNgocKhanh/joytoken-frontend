@@ -11,18 +11,23 @@ export const authService = {
     }
   },
 
+  // Xác thực OTP đăng ký email
+  verifyRegisterEmail: async (email, otp) => {
+    try {
+      const response = await apiClient.post('/auth/verify-email', { email, otp });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Đăng nhập
   login: async (credentials) => {
     try {
       const response = await apiClient.post('/auth/login', credentials);
       
-      // Lưu token và thông tin user vào localStorage
-      if (response.accessToken) {
-        localStorage.setItem('accessToken', response.accessToken);
-        localStorage.setItem('refreshToken', response.refreshToken);
-        localStorage.setItem('user', JSON.stringify(response.user));
-      }
-      
+      // Không lưu vào localStorage ở đây, để useAuth hook xử lý
+      // Chỉ trả về response
       return response;
     } catch (error) {
       throw error;
@@ -33,20 +38,27 @@ export const authService = {
   logout: async () => {
     try {
       await apiClient.post('/auth/logout');
-      
-      // Xóa thông tin trong localStorage
+    } catch (error) {
+      // Vẫn tiếp tục clear local dù API lỗi
+      console.warn('Logout API error:', error);
+    } finally {
+      // Xóa tất cả thông tin trong localStorage
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      
+      // Clear cart và wishlist
+      localStorage.removeItem('cart');
+      localStorage.removeItem('wishlist');
+      localStorage.removeItem('wishlistIds');
+      
+      // Dispatch events để các component cập nhật
+      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(new Event('storage'));
+    }
       
       return true;
-    } catch (error) {
-      // Vẫn xóa thông tin local dù API lỗi
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      throw error;
-    }
   },
 
   // Refresh token

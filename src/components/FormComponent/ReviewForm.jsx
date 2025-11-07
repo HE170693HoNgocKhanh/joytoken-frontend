@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Form, Input, Rate, Button, message } from "antd";
-import axios from "axios";
+import { Form, Input, Rate, Button, message as antdMessage } from "antd";
+import apiClient from "../../services/apiClient";
 
 const ReviewForm = ({ productId, onSubmit }) => {
   const [loading, setLoading] = useState(false);
-  const token = localStorage.getItem("token");
-  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -16,28 +15,16 @@ const ReviewForm = ({ productId, onSubmit }) => {
         comment: values.comment,
       };
 
-      // Gửi request POST tới backend
-      const res = await axios.post(
-        "http://localhost:8080/api/reviews",
-        newReview,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // gửi token về BE
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Gửi request POST tới backend (dùng apiClient để tự động gắn token)
+      const res = await apiClient.post("/reviews", newReview);
 
-      if (res.status === 201 || res.status === 200) {
-        message.success("Cảm ơn bạn đã gửi đánh giá!");
-        onSubmit?.(res.data); // gọi callback để cập nhật danh sách review
-      } else {
-        message.warning("Không thể gửi đánh giá, vui lòng thử lại!");
-      }
+      // apiClient trả về res.data trực tiếp
+      antdMessage.success("Cảm ơn bạn đã gửi đánh giá!");
+      onSubmit?.(res.data);
     } catch (error) {
-      console.error("❌ Lỗi khi gửi đánh giá:", error);
-      setMessage(error.response?.data?.message || "Không thể gửi đánh giá.");
-      message.error(error.response?.data?.message || "Không thể gửi đánh giá.");
+      const msg = error?.message || error?.data?.message || "Không thể gửi đánh giá.";
+      setErrorMessage(msg);
+      antdMessage.error(msg);
     } finally {
       setLoading(false);
     }
@@ -66,7 +53,7 @@ const ReviewForm = ({ productId, onSubmit }) => {
       >
         <Input.TextArea rows={4} placeholder="Chia sẻ cảm nhận của bạn..." />
       </Form.Item>
-      {message && <p style={{ color: "red" }}>{message}</p>}
+      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
       <Button type="primary" htmlType="submit" loading={loading} block>
         Gửi đánh giá
       </Button>

@@ -63,9 +63,20 @@ const OrderPage = () => {
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
     0
   );
+  
+  // Đọc thông tin voucher từ localStorage (nếu có)
+  const [voucherInfo, setVoucherInfo] = useState(null);
+  useEffect(() => {
+    const orderData = JSON.parse(localStorage.getItem("orderData") || "null");
+    if (orderData?.voucherInfo) {
+      setVoucherInfo(orderData.voucherInfo);
+    }
+  }, []);
+  
   const taxPrice = itemsPrice * 0.1;
   const shippingPrice = 3000;
-  const totalPrice = itemsPrice + taxPrice + shippingPrice;
+  const discountAmount = voucherInfo?.applied || 0;
+  const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount;
 
   // 🛒 Load cart
   useEffect(() => {
@@ -168,7 +179,9 @@ const OrderPage = () => {
         itemsPrice,
         taxPrice,
         shippingPrice,
+        discountAmount,
         totalPrice,
+        voucherInfo,
         returnUrl,
         cancelUrl,
       });
@@ -549,6 +562,12 @@ const OrderPage = () => {
                 <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
                 <span>₫{itemsPrice.toLocaleString()}</span>
               </SummaryRow>
+              {voucherInfo && discountAmount > 0 && (
+                <SummaryRow style={{ color: "#28a745" }}>
+                  <span>Giảm giá (Voucher 5%):</span>
+                  <span>-₫{discountAmount.toLocaleString()}</span>
+                </SummaryRow>
+              )}
               <SummaryRow>
                 <span>Thuế VAT (10%):</span>
                 <span>₫{taxPrice.toLocaleString()}</span>

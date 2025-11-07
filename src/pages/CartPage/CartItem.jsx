@@ -39,22 +39,19 @@ const CartItem = ({
           <img
             src={selectedVariant?.image || image}
             alt={name}
-            style={{
-              width: "70px",
-              height: "70px",
-              borderRadius: "8px",
-              objectFit: "cover",
-            }}
           />
         </ImageBox>
 
         {/* Tên và variant */}
         <InfoBox>
-          <div className="title" style={{ fontWeight: 600 }}>
+          <div className="title" style={{ fontWeight: 600, fontSize: "16px", marginBottom: "8px" }}>
             {name}
           </div>
 
-          <div className="variantRow" style={{ marginTop: "4px" }}>
+          <div className="variantRow" style={{ marginTop: "8px" }}>
+            <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>
+              Phân Loại Hàng:
+            </div>
             <SmallSelect
               value={
                 selectedVariant
@@ -96,27 +93,59 @@ const CartItem = ({
       </ProductCol>
 
       {/* Giá */}
-      <PriceCol>₫{(price || 0).toLocaleString()}</PriceCol>
+      <PriceCol>
+        {selectedVariant?.originalPrice && selectedVariant.originalPrice > price ? (
+          <div>
+            <div style={{ textDecoration: "line-through", color: "#999", fontSize: "14px" }}>
+              ₫{selectedVariant.originalPrice.toLocaleString()}
+            </div>
+            <div style={{ color: "#333", fontWeight: 600, fontSize: "16px" }}>
+              ₫{(price || 0).toLocaleString()}
+            </div>
+          </div>
+        ) : (
+          <div style={{ color: "#333", fontWeight: 600, fontSize: "16px" }}>
+            ₫{(price || 0).toLocaleString()}
+          </div>
+        )}
+      </PriceCol>
 
       {/* Số lượng */}
       <QtyCol>
-        <button
-          onClick={() => onQtyChange(Math.max(1, quantity - 1))}
-          disabled={quantity <= 1}
-        >
-          -
-        </button>
-        <span>{quantity}</span>
-        <button onClick={() => onQtyChange(quantity + 1)}>+</button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={() => onQtyChange(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1}
+            >
+              -
+            </button>
+            <span>{quantity}</span>
+            <button onClick={() => onQtyChange(quantity + 1)}>+</button>
+          </div>
+          {(selectedVariant?.countInStock ?? item.countInStock) > 0 && (
+            <div style={{ color: "#ff9800", fontSize: "12px", marginTop: "4px" }}>
+              Còn {(selectedVariant?.countInStock ?? item.countInStock)} sản phẩm
+            </div>
+          )}
+        </div>
       </QtyCol>
 
       {/* Tổng giá */}
-      <PriceCol>₫{((price || 0) * quantity).toLocaleString()}</PriceCol>
+      <PriceCol>
+        <div style={{ color: "#ff9800", fontWeight: 700, fontSize: "18px" }}>
+          ₫{((price || 0) * quantity).toLocaleString()}
+        </div>
+      </PriceCol>
 
       {/* Hành động */}
       <ActionCol>
         <ActionButtons>
-          <Button onClick={onRemove}>Xoá</Button>
+          <Button onClick={onRemove} style={{ marginBottom: "8px" }}>Xóa</Button>
+          <Button type="link" style={{ color: "#333", fontSize: "12px", padding: 0 }}>
+            Tìm sản phẩm tương tự
+            <span style={{ color: "#e74c3c", marginLeft: "4px" }}>▼</span>
+          </Button>
         </ActionButtons>
       </ActionCol>
     </Row>

@@ -26,6 +26,7 @@ import {
 import { productService } from "../../services/productService";
 import VariantSelector from "../../components/ProductComponent/VariantSelector";
 import ReviewSection from "../../components/ProductComponent/ReviewSection";
+import HeartButton from "../../components/ProductComponent/HeartButton";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -378,11 +379,11 @@ const ProductDetailPage = () => {
 
           <ActionWrapper>
             <AddToCartButton onClick={handleAddToCart}>
-              🛒 Add to Cart
+              🛒 Thêm vào giỏ hàng
             </AddToCartButton>
-            <WishlistButton onClick={handleAddToWishlist}>
-              <FaHeart /> Add to Wishlist
-            </WishlistButton>
+            <div>
+              <HeartButton productId={product._id} withLabel={true} />
+            </div>
           </ActionWrapper>
 
           {message && <Message>{message}</Message>}
