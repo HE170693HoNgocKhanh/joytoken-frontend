@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
+import QuickReplies from "./QuickReplies";
 
 const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
   const currentUser = JSON.parse(localStorage.getItem("user"));
@@ -53,6 +54,7 @@ const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
           <div ref={messageEndRef} />
         </div>
       </MessageArea>
+      <QuickReplies onSend={onSend} />
 
       <ChatInput onSend={onSend} onSendImage={onSendImage} />
     </Window>

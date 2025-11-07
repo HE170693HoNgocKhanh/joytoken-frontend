@@ -4,6 +4,7 @@ import {
   ShoppingCartOutlined,
   UserOutlined,
   HeartOutlined,
+  PhoneOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
 import {
@@ -17,6 +18,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import DrawerCart from "../ProductComponent/DrawerCart";
 import DrawerFavorite from "../ProductComponent/DrawerFavorite";
+import { conversationService } from "../../services/conversationService";
 import ExchangeModal from "../ExchangeComponent/ExchangeModal";
 import NotificationBell from "../NotificationComponent/NotificationBell";
 import { useWishlist } from "../../hooks/useWishlist";
@@ -192,6 +194,24 @@ const Header = () => {
     },
   ];
 
+  const handleContactStaff = async () => {
+    try {
+      const res = await conversationService.createConversation(
+        "68fd15a8288145826a47901e"
+      );
+
+      const conversation = res?.data;
+
+      if (conversation?._id) {
+        navigate(`/chat/${conversation._id}`);
+      } else {
+        console.error("Không nhận được thông tin cuộc trò chuyện!");
+      }
+    } catch (error) {
+      console.error("Lỗi tạo hoặc lấy conversation:", error);
+    }
+  };
+
   return (
     <WrapperHeader>
       <WrapperTop>
@@ -229,9 +249,16 @@ const Header = () => {
             </Button>
           )}
           {token && user ? (
-            <Dropdown menu={{ items }}>
-              <UserOutlined style={{ fontSize: "20px", cursor: "pointer" }} />
-            </Dropdown>
+            <>
+              <PhoneOutlined
+                style={{ fontSize: "20px" }}
+                onClick={handleContactStaff}
+              />
+
+              <Dropdown menu={{ items }}>
+                <UserOutlined style={{ fontSize: "20px" }} />
+              </Dropdown>
+            </>
           ) : (
             <button
               onClick={handleLoginClick}
