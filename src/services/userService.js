@@ -51,6 +51,36 @@ export const userService = {
     return response;
   },
 
+  getMonthlyRevenue: async (month) => {
+    const response = await apiClient.get(`/users/revenue/monthly?month=${month}`);
+    return response;
+  },
+
+  getRevenueChartData: async (type, year, month) => {
+    let url = `/users/revenue/chart?type=${type}`;
+    if (year) url += `&year=${year}`;
+    if (month) url += `&month=${month}`;
+    const response = await apiClient.get(url);
+    return response;
+  },
+
+  getInventoryChartData: async (year, month) => {
+    let url = `/users/inventory/chart?year=${year}`;
+    if (month !== null && month !== undefined) {
+      url += `&month=${month}`;
+    }
+    const response = await apiClient.get(url);
+    return response;
+  },
+
+  getUserChartData: async (type = "monthly", year, month) => {
+    let url = `/users/chart/users?type=${type}`;
+    if (year) url += `&year=${year}`;
+    if (month) url += `&month=${month}`;
+    const response = await apiClient.get(url);
+    return response;
+  },
+
   deleteUser: async (id) => {
     const response = await apiClient.delete(`/users/${id}`);
     return response;

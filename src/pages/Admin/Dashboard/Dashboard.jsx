@@ -48,6 +48,10 @@ import timezone from "dayjs/plugin/timezone";
 import { useNavigate } from "react-router";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import RevenueChart from "../../../components/RevenueChart/RevenueChart";
+import InventoryChart from "../../../components/InventoryChart/InventoryChart";
+import UserChart from "../../../components/UserChart/UserChart";
+import UserActivityChart from "../../../components/UserChart/UserActivityChart";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -426,6 +430,23 @@ const Dashboard = () => {
           </StatCard>
         </Col>
       </Row>
+
+      {/* Biểu đồ phân tích */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} xl={12}>
+          <RevenueChart />
+        </Col>
+        <Col xs={24} xl={12}>
+          <InventoryChart />
+        </Col>
+        <Col xs={24} xl={12}>
+          <UserChart />
+        </Col>
+        <Col xs={24} xl={12}>
+          <UserActivityChart />
+        </Col>
+      </Row>
+
       {/* Báo cáo doanh thu ngày */}
       <StyledCard
         title={

@@ -5,11 +5,13 @@ import DefaultComponent from "./components/DefaultComponent/DefaultComponent";
 import AdminLayout from "./components/AdminLayout/AdminLayout";
 import { Fragment } from "react";
 import ChatWidget from "./components/ChatComponent/ChatWidget";
+import ActivityTracker from "./components/ActivityTracker/ActivityTracker";
 
 export function App() {
   return (
     <div>
       <Router>
+        <ActivityTracker />
         <Routes>
           {routes.map((route) => {
             const Page = route.page;

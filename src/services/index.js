@@ -7,6 +7,7 @@ export { userService } from "./userService";
 export { inventoryService } from './inventoryService';
 export { exchangeService } from './exchangeService';
 export { notificationService } from './notificationService';
+export { trackingService } from './trackingService';
 
 // Export apiClient để sử dụng trực tiếp nếu cần
 export { default as apiClient } from './apiClient';
