@@ -6,6 +6,9 @@ export const conversationService = {
   getConversationDetails: async (conversationId) => {
     return await apiClient.get(`/conversations/${conversationId}`);
   },
+  createConversation: async (receiverId) => {
+    return await apiClient.post("/conversations", { receiverId });
+  },
   uploadImage: async (data) => {
     return await apiClient.post("/conversations/upload/image", data, {
       headers: { "Content-Type": "multipart/form-data" },

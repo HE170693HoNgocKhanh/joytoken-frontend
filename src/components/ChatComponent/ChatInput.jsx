@@ -49,7 +49,12 @@ const ChatInput = ({ onSend, onSendImage }) => {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Aa"
-        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        onKeyUp={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
       />
       <SendButton onClick={handleSend}>
         <SendOutlined />
