@@ -39,7 +39,6 @@ const ProductList = () => {
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
-  const [selectedTags, setSelectedTags] = useState([]);
   
   // Sort state
   const [sortBy, setSortBy] = useState("most_popular");
@@ -62,7 +61,7 @@ const ProductList = () => {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [products, selectedCategories, priceRange, selectedTags, sortBy]);
+  }, [products, selectedCategories, priceRange, sortBy]);
 
   const fetchCategories = async () => {
     try {
@@ -111,26 +110,6 @@ const ProductList = () => {
         product.price >= priceRange[0] && product.price <= priceRange[1]
     );
 
-    // Filter by tags (OR logic - sản phẩm chỉ cần match ít nhất 1 tag)
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((product) => {
-        return selectedTags.some((tag) => {
-          if (tag === "best_seller") {
-            return product.isBestSeller || product.rating >= 4.5;
-          }
-          if (tag === "new_in") {
-            // Sản phẩm mới trong 30 ngày
-            const daysSinceCreated = (Date.now() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-            return product.isNew || daysSinceCreated <= 30;
-          }
-          if (tag === "back_in_stock") {
-            return product.isBackInStock || (product.countInStock > 0 && product.countInStock <= 10);
-          }
-          return false;
-        });
-      });
-    }
-
 
     // Sort
     switch (sortBy) {
@@ -162,14 +141,7 @@ const ProductList = () => {
   const handleClearFilters = () => {
     setSelectedCategories([]);
     setPriceRange([0, 1000000]);
-    setSelectedTags([]);
     setSortBy("most_popular");
-  };
-
-  const handleTagClick = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
   };
 
   // Tính min và max price từ products
@@ -233,23 +205,9 @@ const ProductList = () => {
         </Row>
 
         {/* Filter Tags - chỉ hiển thị khi có filter active */}
-        {(selectedTags.length > 0 || selectedCategories.length > 0) && (
+        {selectedCategories.length > 0 && (
           <FilterTagsContainer>
             <Space wrap>
-              {selectedTags.map((tag) => (
-                <Tag
-                  key={tag}
-                  closable
-                  onClose={() => handleTagClick(tag)}
-                  color="blue"
-                >
-                  {tag === "best_seller"
-                    ? "Best Seller"
-                    : tag === "new_in"
-                    ? "New In"
-                    : "Back in Stock"}
-                </Tag>
-              ))}
               {selectedCategories.map((catId) => {
                 const cat = categories.find((c) => c._id === catId);
                 return (
@@ -361,35 +319,6 @@ const ProductList = () => {
                 {priceRange[1].toLocaleString("vi-VN")}₫
               </Text>
             </div>
-          </div>
-
-          <Divider />
-
-          {/* Tags Filter */}
-          <div>
-            <Title level={5}>Tags</Title>
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <Checkbox
-                checked={selectedTags.includes("best_seller")}
-                onChange={(e) =>
-                  handleTagClick("best_seller")
-                }
-              >
-                Best Seller
-              </Checkbox>
-              <Checkbox
-                checked={selectedTags.includes("new_in")}
-                onChange={(e) => handleTagClick("new_in")}
-              >
-                New In
-              </Checkbox>
-              <Checkbox
-                checked={selectedTags.includes("back_in_stock")}
-                onChange={(e) => handleTagClick("back_in_stock")}
-              >
-                Back in Stock
-              </Checkbox>
-            </Space>
           </div>
 
           <Divider />

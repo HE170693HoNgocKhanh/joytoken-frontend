@@ -18,6 +18,7 @@ import {
   Image,
   Spin,
   Upload,
+  Checkbox,
 } from "antd";
 import {
   EditOutlined,
@@ -53,6 +54,28 @@ const ProductManagement = () => {
   const [searchText, setSearchText] = useState("");
 
   const SIZES = ["Lớn", "Trung Bình", "Nhỏ"];
+  
+  // Danh sách sự kiện và tags (đã gộp chung)
+  const EVENT_OPTIONS = [
+    { label: "Sinh nhật", value: "birthday" },
+    { label: "Halloween", value: "halloween" },
+    { label: "Giáng sinh", value: "christmas" },
+    { label: "Tết", value: "tet" },
+    { label: "Valentine", value: "valentine" },
+    { label: "8/3", value: "8/3" },
+    { label: "20/10", value: "20/10" },
+    { label: "1/6", value: "1/6" },
+    { label: "Khai trương", value: "khai trương" },
+    { label: "Tốt nghiệp", value: "tốt nghiệp" },
+    { label: "Quà tặng", value: "quà tặng" },
+    { label: "Dễ thương", value: "dễ thương" },
+    { label: "Tình yêu", value: "tình yêu" },
+    { label: "Thiếu nhi", value: "thiếu nhi" },
+    { label: "Trẻ em", value: "trẻ em" },
+    { label: "Bestseller", value: "bestseller" },
+    { label: "Mới", value: "mới" },
+    { label: "Hot", value: "hot" },
+  ];
 
   // 🧩 1️⃣ Lấy danh sách sản phẩm
   const fetchProducts = async () => {
@@ -104,6 +127,11 @@ const ProductManagement = () => {
           stock: editingProduct.countInStock,
           description: editingProduct.description,
           category: editingProduct.category?._id,
+          events: [...(editingProduct.events || []), ...(editingProduct.tags || [])],
+          isBestSeller: editingProduct.isBestSeller || false,
+          isNew: editingProduct.isNew || false,
+          isBackInStock: editingProduct.isBackInStock || false,
+          label: editingProduct.label || null,
           variants: editingProduct.variants?.length
             ? editingProduct.variants.map((v) => ({
                 size: v.size,
@@ -138,6 +166,10 @@ const ProductManagement = () => {
           variants: [{}],
           image: [],
           images: [],
+          events: [],
+          isBestSeller: false,
+          isNew: false,
+          isBackInStock: false,
         });
       }
     }
@@ -160,6 +192,17 @@ const ProductManagement = () => {
       formData.append("description", values.description);
       formData.append("price", values.price);
       formData.append("category", values.category);
+
+      // Events (đã gộp tags vào) - LUÔN gửi, kể cả mảng rỗng
+      formData.append("events", JSON.stringify(values.events || []));
+
+      // Flags - LUÔN gửi
+      formData.append("isBestSeller", values.isBestSeller ? "true" : "false");
+      formData.append("isNew", values.isNew ? "true" : "false");
+      formData.append("isBackInStock", values.isBackInStock ? "true" : "false");
+      
+      // Label - gửi rỗng nếu không có
+      formData.append("label", values.label || "");
 
       let totalStock = 0;
       if (values.variants && values.variants.length > 0) {
@@ -271,6 +314,28 @@ const ProductManagement = () => {
       dataIndex: "countInStock",
       key: "countInStock",
       sorter: (a, b) => a.countInStock - b.countInStock,
+    },
+    {
+      title: "Sự kiện & Tags",
+      key: "events",
+      render: (_, record) => {
+        // Gộp events và tags cũ (nếu có) để hiển thị
+        const allEvents = [
+          ...(record.events || []),
+          ...(record.tags || [])
+        ];
+        if (allEvents.length === 0) return "-";
+        return (
+          <Space size={[0, 4]} wrap>
+            {allEvents.slice(0, 5).map((event, idx) => (
+              <Tag key={idx} color="blue">{event}</Tag>
+            ))}
+            {allEvents.length > 5 && (
+              <Tag color="default">+{allEvents.length - 5}</Tag>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -410,6 +475,49 @@ const ProductManagement = () => {
           <Form.Item name="description" label="Mô tả">
             <TextArea rows={3} placeholder="Nhập mô tả sản phẩm..." />
           </Form.Item>
+
+          <Form.Item name="events" label="Sự kiện & Tags">
+            <Select
+              mode="tags"
+              placeholder="Chọn sự kiện hoặc nhập tags tự do"
+              allowClear
+              tokenSeparators={[","]}
+            >
+              {EVENT_OPTIONS.map((event) => (
+                <Option key={event.value} value={event.value}>
+                  {event.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={6}>
+              <Form.Item name="isBestSeller" valuePropName="checked">
+                <Checkbox>Bestseller</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="isNew" valuePropName="checked">
+                <Checkbox>Sản phẩm mới</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="isBackInStock" valuePropName="checked">
+                <Checkbox>Vừa về hàng</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="label" label="Nhãn">
+                <Select placeholder="Chọn nhãn" allowClear>
+                  <Option value="Sale">Sale</Option>
+                  <Option value="New">New</Option>
+                  <Option value="Hot">Hot</Option>
+                  <Option value="Best">Best</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
             Phiên bản
