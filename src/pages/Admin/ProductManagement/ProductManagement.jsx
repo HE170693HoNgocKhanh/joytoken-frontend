@@ -52,9 +52,14 @@ const ProductManagement = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const SIZES = ["Lớn", "Trung Bình", "Nhỏ"];
-  
+
   // Danh sách sự kiện và tags (đã gộp chung)
   const EVENT_OPTIONS = [
     { label: "Sinh nhật", value: "birthday" },
@@ -77,15 +82,24 @@ const ProductManagement = () => {
     { label: "Hot", value: "hot" },
   ];
 
-  // 🧩 1️⃣ Lấy danh sách sản phẩm
+  // 🧩 1️⃣ Lấy danh sách sản phẩm (đã sửa để hỗ trợ pagination và search server-side)
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await productService.getAllProducts();
-      setProducts(res.data);
+      const res = await productService.getAllProducts({
+        page,
+        limit: pageSize,
+        search: searchText,
+      });
+
+      console.log("🚀 Fetched products:", res.data);
+      setProducts(res.data || []); // ✅ Lấy mảng products từ res.data.data
+      setTotal(res.data.pagination?.total || 0); // ✅ Lấy total từ res.data.pagination.total
     } catch (err) {
       console.error(err);
       messageApi.error("Không thể tải danh sách sản phẩm!");
+      setProducts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -96,15 +110,19 @@ const ProductManagement = () => {
     try {
       const res = await categoryService.getAllCategories();
       setCategories(res.data);
-      // messageApi.success("Tải danh mục thành công!");
     } catch (err) {
       console.error(err);
       messageApi.error("Không thể tải danh mục!");
     }
   };
 
+  // ✅ useEffect cho products: refetch khi page, pageSize, searchText thay đổi
   useEffect(() => {
     fetchProducts();
+  }, [page, pageSize, searchText]);
+
+  // ✅ useEffect cho categories: chỉ chạy 1 lần
+  useEffect(() => {
     fetchCategories();
   }, []);
 
@@ -112,8 +130,6 @@ const ProductManagement = () => {
   const showModal = (product = null) => {
     setEditingProduct(product);
     setIsModalVisible(true);
-
-    // ❌ Bỏ form.setFieldsValue() ở đây đi
     form.resetFields();
   };
 
@@ -127,7 +143,10 @@ const ProductManagement = () => {
           stock: editingProduct.countInStock,
           description: editingProduct.description,
           category: editingProduct.category?._id,
-          events: [...(editingProduct.events || []), ...(editingProduct.tags || [])],
+          events: [
+            ...(editingProduct.events || []),
+            ...(editingProduct.tags || []),
+          ],
           isBestSeller: editingProduct.isBestSeller || false,
           isNew: editingProduct.isNew || false,
           isBackInStock: editingProduct.isBackInStock || false,
@@ -139,7 +158,7 @@ const ProductManagement = () => {
                 price: v.price,
                 countInStock: v.countInStock,
               }))
-            : [{}], // nếu không có variant thì tạo 1 trống
+            : [{}],
           image: editingProduct.image
             ? [
                 {
@@ -181,16 +200,15 @@ const ProductManagement = () => {
     form.resetFields();
   };
 
-  // 🧩 4️⃣ Submit form thêm / sửa
-  // --- Thay thế nguyên hàm handleSubmit ---
+  // 🧩 4️⃣ Submit form thêm / sửa (sửa nhỏ: bỏ hardcode price=1000, dùng variants để tính)
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields(); // lấy giá trị từ form
+      const values = await form.validateFields();
 
       const formData = new FormData();
       formData.append("name", values.name);
       formData.append("description", values.description);
-      formData.append("price", values.price);
+      // ✅ Bỏ hardcode price=1000, backend sẽ tính từ variants
       formData.append("category", values.category);
 
       // Events (đã gộp tags vào) - LUÔN gửi, kể cả mảng rỗng
@@ -200,7 +218,7 @@ const ProductManagement = () => {
       formData.append("isBestSeller", values.isBestSeller ? "true" : "false");
       formData.append("isNew", values.isNew ? "true" : "false");
       formData.append("isBackInStock", values.isBackInStock ? "true" : "false");
-      
+
       // Label - gửi rỗng nếu không có
       formData.append("label", values.label || "");
 
@@ -221,7 +239,9 @@ const ProductManagement = () => {
       // Ảnh phụ
       if (values.images && values.images.length > 0) {
         values.images.forEach((file) => {
-          formData.append("images", file.originFileObj);
+          if (file.originFileObj) {
+            formData.append("images", file.originFileObj);
+          }
         });
       }
 
@@ -238,9 +258,8 @@ const ProductManagement = () => {
       }
 
       handleCancel();
-      fetchProducts();
+      fetchProducts(); // Refetch sau khi tạo/cập nhật
 
-      // Sau khi modal đóng, show message
       messageApi.success(
         editingProduct
           ? "Cập nhật sản phẩm thành công"
@@ -248,6 +267,7 @@ const ProductManagement = () => {
       );
     } catch (err) {
       console.error(err);
+      messageApi.error("Lỗi khi lưu sản phẩm!");
     }
   };
 
@@ -257,7 +277,7 @@ const ProductManagement = () => {
       setLoading(true);
       await productService.deleteProduct(id);
       messageApi.success("🗑️ Xóa sản phẩm thành công!");
-      fetchProducts();
+      fetchProducts(); // Refetch sau xóa
     } catch (err) {
       console.error(err);
       messageApi.error("❌ Xóa sản phẩm thất bại!");
@@ -266,7 +286,7 @@ const ProductManagement = () => {
     }
   };
 
-  // 🧩 6️⃣ Cột table
+  // 🧩 6️⃣ Cột table (giữ nguyên)
   const columns = [
     {
       title: "Hình ảnh",
@@ -295,14 +315,19 @@ const ProductManagement = () => {
     },
     {
       title: "Giá bán",
-      dataIndex: "price",
-      key: "price",
-      sorter: (a, b) => a.price - b.price,
-      render: (price) =>
-        new Intl.NumberFormat("vi-VN", {
+      key: "minPrice",
+      sorter: (a, b) => {
+        const minA = Math.min(...a.variants.map((v) => v.price));
+        const minB = Math.min(...b.variants.map((v) => v.price));
+        return minA - minB;
+      },
+      render: (_, record) => {
+        const minPrice = Math.min(...record.variants.map((v) => v.price));
+        return new Intl.NumberFormat("vi-VN", {
           style: "currency",
           currency: "VND",
-        }).format(price),
+        }).format(minPrice);
+      },
     },
     {
       title: "Phiên bản",
@@ -319,16 +344,14 @@ const ProductManagement = () => {
       title: "Sự kiện & Tags",
       key: "events",
       render: (_, record) => {
-        // Gộp events và tags cũ (nếu có) để hiển thị
-        const allEvents = [
-          ...(record.events || []),
-          ...(record.tags || [])
-        ];
+        const allEvents = [...(record.events || []), ...(record.tags || [])];
         if (allEvents.length === 0) return "-";
         return (
           <Space size={[0, 4]} wrap>
             {allEvents.slice(0, 5).map((event, idx) => (
-              <Tag key={idx} color="blue">{event}</Tag>
+              <Tag key={idx} color="blue">
+                {event}
+              </Tag>
             ))}
             {allEvents.length > 5 && (
               <Tag color="default">+{allEvents.length - 5}</Tag>
@@ -363,24 +386,33 @@ const ProductManagement = () => {
             title="Xem chi tiết"
             onClick={() => showModal(record)}
           />
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            title="Chỉnh sửa"
-            onClick={() => showModal(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa sản phẩm này?"
-            onConfirm={() => handleDelete(record._id)}
-          >
-            <Button type="text" icon={<DeleteOutlined />} danger title="Xóa" />
-          </Popconfirm>
+          {user && user.role !== "staff" && (
+            <>
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                title="Chỉnh sửa"
+                onClick={() => showModal(record)}
+              />
+              <Popconfirm
+                title="Bạn có chắc chắn muốn xóa sản phẩm này?"
+                onConfirm={() => handleDelete(record._id)}
+              >
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  danger
+                  title="Xóa"
+                />
+              </Popconfirm>
+            </>
+          )}
         </Space>
       ),
     },
   ];
 
-  // 🧩 7️⃣ JSX render
+  // 🧩 7️⃣ JSX render (sửa search và table pagination)
   return (
     <div>
       {contextHolder}
@@ -391,8 +423,10 @@ const ProductManagement = () => {
             placeholder="Tìm kiếm sản phẩm..."
             allowClear
             style={{ width: 300 }}
-            onSearch={setSearchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onSearch={(value) => {
+              setSearchText(value);
+              setPage(1); // ✅ Reset về page 1 khi search mới
+            }}
           />
           <Button
             type="primary"
@@ -406,16 +440,25 @@ const ProductManagement = () => {
         <Spin spinning={loading}>
           <Table
             columns={columns}
-            dataSource={products.filter((p) =>
-              p.name.toLowerCase().includes(searchText.toLowerCase())
-            )}
+            dataSource={products} // ✅ Bỏ filter client-side, dùng server-side search
             rowKey="_id"
-            pagination={{ pageSize: 10 }}
+            pagination={{
+              current: page,
+              pageSize: pageSize,
+              total: total, // ✅ total là number đúng từ BE
+              onChange: (newPage, newPageSize) => {
+                setPage(newPage);
+                if (newPageSize) {
+                  setPageSize(newPageSize);
+                  setPage(1); // ✅ Reset page về 1 khi thay đổi pageSize
+                }
+              },
+            }}
           />
         </Spin>
       </StyledCard>
 
-      {/* Modal Form */}
+      {/* Modal Form (giữ nguyên) */}
       <Modal
         title={editingProduct ? "Chỉnh sửa Sản phẩm" : "Thêm Sản phẩm mới"}
         open={isModalVisible}
@@ -427,11 +470,11 @@ const ProductManagement = () => {
           form={form}
           layout="vertical"
           initialValues={{
-            variants: [{}], // tạo sẵn 1 variant trống
+            variants: [{}],
           }}
         >
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
@@ -440,22 +483,7 @@ const ProductManagement = () => {
                 <Input placeholder="Nhập tên sản phẩm" />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item
-                name="price"
-                label="Giá bán (VNĐ)"
-                rules={[{ required: true, message: "Nhập giá bán" }]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  formatter={(v) =>
-                    `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="category"
                 label="Danh mục"

@@ -133,6 +133,8 @@ const Dashboard = () => {
   const [orderToEdit, setOrderToEdit] = useState(null);
   const [newStatus, setNewStatus] = useState("Pending");
 
+  const user = JSON.parse(localStorage.getItem("user")) || null;
+
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -358,10 +360,12 @@ const Dashboard = () => {
             onClick={() => handleViewDetails(record)}
           />
           {/* Nút chỉnh trạng thái */}
-          <EditOutlined
-            style={{ color: "#fa8c16", fontSize: 18, cursor: "pointer" }}
-            onClick={() => handleOpenEditStatusModal(record)}
-          />
+          {user && (user.role === "admin" || user.role === "staff") && (
+            <EditOutlined
+              style={{ color: "#fa8c16", fontSize: 18, cursor: "pointer" }}
+              onClick={() => handleOpenEditStatusModal(record)}
+            />
+          )}
         </Space>
       ),
     },
@@ -379,73 +383,84 @@ const Dashboard = () => {
   return (
     <div>
       {contextHolder}
-      <Title level={2}>Thống kê doanh thu</Title>
-      {/* Tổng quan hệ thống */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6} onClick={() => navigate("/admin/users")}>
-          <StatCard>
-            <Statistic
-              title="Tổng Users"
-              value={stats.totalCustomers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: "#3f8600" }}
-            />
-          </StatCard>
-        </Col>
-        <Col xs={24} sm={12} lg={6} onClick={() => navigate("/admin/products")}>
-          <StatCard>
-            <Statistic
-              title="Tổng Sản phẩm"
-              value={stats.totalProducts}
-              prefix={<ShoppingOutlined />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </StatCard>
-        </Col>
-        <Col
-          xs={24}
-          sm={12}
-          lg={6}
-          onClick={() => navigate("/admin/categories")}
-        >
-          <StatCard>
-            <Statistic
-              title="Danh mục"
-              value={stats.totalCategories}
-              prefix={<AppstoreOutlined />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </StatCard>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard>
-            <Statistic
-              title="Tổng Doanh thu"
-              value={stats.totalRevenue}
-              prefix={<DollarOutlined />}
-              formatter={(value) => value}
-              valueStyle={{ color: "#cf1322" }}
-              suffix={<ArrowUpOutlined />}
-            />
-          </StatCard>
-        </Col>
-      </Row>
+      {user && user.role === "admin" && (
+        <>
+          <Title level={2}>Thống kê doanh thu</Title>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col
+              xs={24}
+              sm={12}
+              lg={6}
+              onClick={() => navigate("/admin/users")}
+            >
+              <StatCard>
+                <Statistic
+                  title="Tổng Users"
+                  value={stats.totalCustomers}
+                  prefix={<UserOutlined />}
+                  valueStyle={{ color: "#3f8600" }}
+                />
+              </StatCard>
+            </Col>
+            <Col
+              xs={24}
+              sm={12}
+              lg={6}
+              onClick={() => navigate("/admin/products")}
+            >
+              <StatCard>
+                <Statistic
+                  title="Tổng Sản phẩm"
+                  value={stats.totalProducts}
+                  prefix={<ShoppingOutlined />}
+                  valueStyle={{ color: "#1890ff" }}
+                />
+              </StatCard>
+            </Col>
+            <Col
+              xs={24}
+              sm={12}
+              lg={6}
+              onClick={() => navigate("/admin/categories")}
+            >
+              <StatCard>
+                <Statistic
+                  title="Danh mục"
+                  value={stats.totalCategories}
+                  prefix={<AppstoreOutlined />}
+                  valueStyle={{ color: "#722ed1" }}
+                />
+              </StatCard>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <StatCard>
+                <Statistic
+                  title="Tổng Doanh thu"
+                  value={stats.totalRevenue}
+                  prefix={<DollarOutlined />}
+                  valueStyle={{ color: "#cf1322" }}
+                  suffix={<ArrowUpOutlined />}
+                />
+              </StatCard>
+            </Col>
+          </Row>
 
-      {/* Biểu đồ phân tích */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} xl={12}>
-          <RevenueChart />
-        </Col>
-        <Col xs={24} xl={12}>
-          <InventoryChart />
-        </Col>
-        <Col xs={24} xl={12}>
-          <UserChart />
-        </Col>
-        <Col xs={24} xl={12}>
-          <UserActivityChart />
-        </Col>
-      </Row>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} xl={12}>
+              <RevenueChart />
+            </Col>
+            <Col xs={24} xl={12}>
+              <InventoryChart />
+            </Col>
+            <Col xs={24} xl={12}>
+              <UserChart />
+            </Col>
+            <Col xs={24} xl={12}>
+              <UserActivityChart />
+            </Col>
+          </Row>
+        </>
+      )}
 
       {/* Báo cáo doanh thu ngày */}
       <StyledCard

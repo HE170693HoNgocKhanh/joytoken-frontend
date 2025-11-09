@@ -62,6 +62,8 @@ const CategoryManagement = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [form] = Form.useForm();
 
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
   /* ---------------- Fetch categories ---------------- */
   const fetchCategories = async () => {
     try {
@@ -208,13 +210,15 @@ const CategoryManagement = () => {
 
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Excel</Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openModal()}
-            >
-              Thêm Danh mục
-            </Button>
+            {user && user.role !== "staff" && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openModal()}
+              >
+                Thêm danh mục
+              </Button>
+            )}
           </Space>
         </div>
 
@@ -268,34 +272,36 @@ const CategoryManagement = () => {
                 : "Chưa có dữ liệu"
             }
           />
-          <Table.Column
-            title="Thao tác"
-            key="action"
-            width={120}
-            render={(_, record) => (
-              <Space>
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => openModal(record)}
-                  size="small"
-                />
-                <Popconfirm
-                  title="Bạn có chắc chắn muốn xóa danh mục này?"
-                  onConfirm={() => deleteCategory(record._id)}
-                  okText="Có"
-                  cancelText="Không"
-                >
+          {user && user.role !== "staff" && (
+            <Table.Column
+              title="Thao tác"
+              key="action"
+              width={120}
+              render={(_, record) => (
+                <Space>
                   <Button
                     type="text"
-                    danger
-                    icon={<DeleteOutlined />}
+                    icon={<EditOutlined />}
+                    onClick={() => openModal(record)}
                     size="small"
                   />
-                </Popconfirm>
-              </Space>
-            )}
-          />
+                  <Popconfirm
+                    title="Bạn có chắc chắn muốn xóa danh mục này?"
+                    onConfirm={() => deleteCategory(record._id)}
+                    okText="Có"
+                    cancelText="Không"
+                  >
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      size="small"
+                    />
+                  </Popconfirm>
+                </Space>
+              )}
+            />
+          )}
         </Table>
       </StyledCard>
       {/* Modal Form */}

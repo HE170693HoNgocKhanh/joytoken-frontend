@@ -256,24 +256,34 @@ const ProductDetailPage = () => {
                 marginTop: "8px",
               }}
             >
-              {product.variants.map((v) => (
+              {product.variants.map((variant, index) => (
                 <button
-                  key={v._id}
-                  onClick={() => setSelectedVariant(v)}
+                  key={variant._id}
+                  onClick={() => {
+                    setSelectedVariant(variant);
+
+                    // 👉 Khi chọn variant thứ index → đổi ảnh tương ứng
+                    if (product.images && product.images[index]) {
+                      console.log(product.images.length, index);
+                      setMainImage(product.images[index]);
+                      setActiveIndex(index);
+                    }
+                  }}
                   style={{
                     border:
-                      selectedVariant?._id === v._id
+                      selectedVariant?._id === variant._id
                         ? "2px solid #007bff"
                         : "1px solid #ccc",
                     borderRadius: "8px",
                     padding: "6px 12px",
                     cursor: "pointer",
                     background:
-                      selectedVariant?._id === v._id ? "#e6f0ff" : "#fff",
+                      selectedVariant?._id === variant._id ? "#e6f0ff" : "#fff",
                     fontSize: "14px",
+                    transition: "all 0.2s ease",
                   }}
                 >
-                  {`${v.size} - ${v.color} - ${v.countInStock}`}
+                  {`${variant.size} - ${variant.color} - ${variant.countInStock}`}
                 </button>
               ))}
             </div>

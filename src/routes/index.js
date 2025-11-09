@@ -91,6 +91,7 @@ export const routes = [
     page: Dashboard,
     isShowHeader: false,
     isAdminRoute: true,
+    isStaffRoute: true,
   },
   {
     path: "/admin/users",

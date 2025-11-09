@@ -34,14 +34,14 @@ const LoginPage = () => {
 
       const response = await login({ email, password });
 
-      alert("Đăng nhập thành công!");
-      
-      // Điều hướng dựa trên role
-      if (response.user.role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/");
+      if (response.error) {
+        setError(response.error);
+        return;
       }
+
+      alert("Đăng nhập thành công!");
+
+      navigate("/");
     } catch (err) {
       setError(err.message || "Đăng nhập thất bại!");
     }

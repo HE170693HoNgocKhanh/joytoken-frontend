@@ -90,11 +90,12 @@ const UserManagement = () => {
       user.name?.toLowerCase().includes(searchText.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchText.toLowerCase());
 
+    const [start, end] = dateRange || [];
     const matchesDate =
-      !dateRange || dateRange.length !== 2 || !user.createdAt
-        ? true // nếu chưa chọn ngày thì mặc định match tất cả
-        : dayjs(user.createdAt).isSameOrAfter(dateRange[0], "day") &&
-          dayjs(user.createdAt).isSameOrBefore(dateRange[1], "day");
+      !start || !end
+        ? true // nếu chưa chọn ngày thì hiển thị tất cả
+        : dayjs(user.createdAt).isSameOrAfter(start, "day") &&
+          dayjs(user.createdAt).isSameOrBefore(end, "day");
 
     return matchesSearch && matchesDate;
   });

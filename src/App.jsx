@@ -17,8 +17,8 @@ export function App() {
             const Page = route.page;
             let Layout = Fragment;
 
-            if (route.isAdminRoute) {
-              Layout = AdminLayout;
+            if (route.isAdminRoute || route.isStaffRoute) {
+              Layout = AdminLayout;            
             } else if (route.isShowHeader) {
               Layout = DefaultComponent;
             }

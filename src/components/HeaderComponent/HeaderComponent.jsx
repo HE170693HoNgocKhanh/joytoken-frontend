@@ -7,6 +7,13 @@ import {
   PhoneOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import DrawerCart from "../ProductComponent/DrawerCart";
+import DrawerFavorite from "../ProductComponent/DrawerFavorite";
+import ExchangeModal from "../ExchangeComponent/ExchangeModal";
+import NotificationBell from "../NotificationComponent/NotificationBell";
+import { useWishlist } from "../../hooks/useWishlist";
 import {
   WrapperHeader,
   WrapperTop,
@@ -14,77 +21,32 @@ import {
   WrapperSearch,
   WrapperMenu,
 } from "./style";
-import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
-import DrawerCart from "../ProductComponent/DrawerCart";
-import DrawerFavorite from "../ProductComponent/DrawerFavorite";
 import { conversationService } from "../../services/conversationService";
-import ExchangeModal from "../ExchangeComponent/ExchangeModal";
-import NotificationBell from "../NotificationComponent/NotificationBell";
-import { useWishlist } from "../../hooks/useWishlist";
 
 const { Search } = Input;
+const ADMIN_PANEL_ROLES = ["admin", "seller", "staff"];
 
 const Header = () => {
+  const navigate = useNavigate();
+  const { wishlistIds } = useWishlist();
+
+  // --- State ---
   const [categories, setCategories] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(wishlistIds?.length || 0);
   const [openDrawerCart, setOpenDrawerCart] = useState(false);
   const [openDrawerFavorite, setOpenDrawerFavorite] = useState(false);
   const [openExchangeModal, setOpenExchangeModal] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
-  const { wishlistIds } = useWishlist();
 
-  const navigate = useNavigate();
-  
-  // Update wishlist count when wishlistIds changes
-  useEffect(() => {
-    setWishlistCount(wishlistIds?.length || 0);
-  }, [wishlistIds]);
-  
-  // Listen for wishlist update events
-  useEffect(() => {
-    const handleWishlistUpdate = (e) => {
-      const count = e.detail?.count || wishlistIds?.length || 0;
-      setWishlistCount(count);
-    };
-    
-    window.addEventListener('wishlistUpdated', handleWishlistUpdate);
-    
-    return () => {
-      window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
-    };
-  }, [wishlistIds]);
-  
   const [authState, setAuthState] = useState(() => {
     const token = localStorage.getItem("accessToken");
     const user = JSON.parse(localStorage.getItem("user") || "null");
     return { token, user };
   });
 
-  // Listen for storage changes to update auth state
-  useEffect(() => {
-    const updateAuthState = () => {
-      const token = localStorage.getItem("accessToken");
-      const user = JSON.parse(localStorage.getItem("user") || "null");
-      setAuthState({ token, user });
-    };
-
-    // Listen for storage events (from other tabs)
-    window.addEventListener("storage", updateAuthState);
-    
-    // Listen for custom events (from same tab)
-    window.addEventListener("userLoggedIn", updateAuthState);
-    window.addEventListener("userLoggedOut", updateAuthState);
-
-    return () => {
-      window.removeEventListener("storage", updateAuthState);
-      window.removeEventListener("userLoggedIn", updateAuthState);
-      window.removeEventListener("userLoggedOut", updateAuthState);
-    };
-  }, []);
-
   const { token, user } = authState;
 
+  // --- Fetch categories ---
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -99,6 +61,7 @@ const Header = () => {
     fetchCategories();
   }, []);
 
+  // --- Update cart count ---
   useEffect(() => {
     const updateCartCount = () => {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -108,69 +71,127 @@ const Header = () => {
       );
       setCartCount(totalItems);
     };
-    updateCartCount();
 
+    updateCartCount();
     window.addEventListener("storage", updateCartCount);
     window.addEventListener("cartUpdated", updateCartCount);
+
     return () => {
       window.removeEventListener("storage", updateCartCount);
       window.removeEventListener("cartUpdated", updateCartCount);
     };
   }, []);
 
+  // --- Update wishlist count ---
+  useEffect(() => setWishlistCount(wishlistIds?.length || 0), [wishlistIds]);
+
+  useEffect(() => {
+    const handleWishlistUpdate = (e) => {
+      setWishlistCount(e.detail?.count || wishlistIds?.length || 0);
+    };
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
+    return () =>
+      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
+  }, [wishlistIds]);
+
+  // --- Listen for auth changes ---
+  useEffect(() => {
+    const updateAuth = () => {
+      const token = localStorage.getItem("accessToken");
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      setAuthState({ token, user });
+    };
+
+    window.addEventListener("storage", updateAuth);
+    window.addEventListener("userLoggedIn", updateAuth);
+    window.addEventListener("userLoggedOut", updateAuth);
+
+    return () => {
+      window.removeEventListener("storage", updateAuth);
+      window.removeEventListener("userLoggedIn", updateAuth);
+      window.removeEventListener("userLoggedOut", updateAuth);
+    };
+  }, []);
+
+  // --- Handlers ---
   const onSearch = (value) => navigate(`/products?search=${value}`);
   const handleLoginClick = () => navigate("/login");
-  const handleProfileClick = (e) => {
-    e?.preventDefault?.();
-    navigate("/profile");
-  };
-  const handleHistoryClick = (e) => {
-    e?.preventDefault?.();
-    navigate("/order-history");
-  };
-  const handleLogoutClick = (e) => {
-    e?.preventDefault?.();
+  const handleProfileClick = () => navigate("/profile");
+  const handleHistoryClick = () => navigate("/order-history");
+  const handleAdminPanelClick = () => navigate("/admin/dashboard");
+
+  const handleLogoutClick = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    
-    // Clear cart và wishlist
     localStorage.removeItem("cart");
     localStorage.removeItem("wishlist");
     localStorage.removeItem("wishlistIds");
-    
-    // Dispatch events
+
     window.dispatchEvent(new Event("userLoggedOut"));
     window.dispatchEvent(new Event("cartUpdated"));
     window.dispatchEvent(new Event("storage"));
-    
+
     navigate("/");
   };
 
+  const handleContactStaff = async () => {
+    try {
+      const res = await conversationService.createConversation(
+        "68fd15a8288145826a47901e"
+      );
+      const conversation = res?.data;
+      if (conversation?._id) navigate(`/chat/${conversation._id}`);
+    } catch (error) {
+      console.error("Lỗi tạo hoặc lấy conversation:", error);
+    }
+  };
+
+  // --- User Dropdown Menu ---
   const items = [
     {
       key: "1",
       label: (
-        <span 
-          onClick={(e) => {
-            e.preventDefault();
-            handleProfileClick(e);
-          }} 
+        <span
+          onClick={handleProfileClick}
           style={{ cursor: "pointer", display: "block", padding: "4px 0" }}
         >
           Profile
         </span>
       ),
     },
+    // Chỉ hiển thị Admin Panel nếu role hợp lệ
+    ...(ADMIN_PANEL_ROLES.includes(user?.role?.toLowerCase())
+      ? [
+          {
+            key: "2",
+            label: (
+              <span
+                onClick={handleAdminPanelClick}
+                style={{
+                  cursor: "pointer",
+                  display: "block",
+                  padding: "4px 0",
+                }}
+              >
+                {user.role === "admin"
+                  ? "Admin"
+                  : user.role === "staff"
+                  ? "Staff"
+                  : "Seller"}{" "}
+                Panel
+              </span>
+            ),
+          },
+        ]
+      : []),
+
     {
-      key: "2",
+      key: "3",
       label: (
-        <span 
-          onClick={(e) => {
-            e.preventDefault();
-            handleHistoryClick(e);
-          }} 
+        <span
+          onClick={handleHistoryClick}
           style={{ cursor: "pointer", display: "block", padding: "4px 0" }}
         >
           History
@@ -178,14 +199,11 @@ const Header = () => {
       ),
     },
     {
-      key: "3",
+      key: "4",
       danger: true,
       label: (
-        <span 
-          onClick={(e) => {
-            e.preventDefault();
-            handleLogoutClick(e);
-          }} 
+        <span
+          onClick={handleLogoutClick}
           style={{ cursor: "pointer", display: "block", padding: "4px 0" }}
         >
           Logout
@@ -193,24 +211,6 @@ const Header = () => {
       ),
     },
   ];
-
-  const handleContactStaff = async () => {
-    try {
-      const res = await conversationService.createConversation(
-        "68fd15a8288145826a47901e"
-      );
-
-      const conversation = res?.data;
-
-      if (conversation?._id) {
-        navigate(`/chat/${conversation._id}`);
-      } else {
-        console.error("Không nhận được thông tin cuộc trò chuyện!");
-      }
-    } catch (error) {
-      console.error("Lỗi tạo hoặc lấy conversation:", error);
-    }
-  };
 
   return (
     <WrapperHeader>
@@ -239,22 +239,17 @@ const Header = () => {
               type="default"
               icon={<SwapOutlined />}
               onClick={() => setOpenExchangeModal(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
             >
               Đổi hàng
             </Button>
           )}
+
           {token && user ? (
             <>
               <PhoneOutlined
                 style={{ fontSize: "20px" }}
                 onClick={handleContactStaff}
               />
-
               <Dropdown menu={{ items }}>
                 <UserOutlined style={{ fontSize: "20px" }} />
               </Dropdown>
@@ -327,9 +322,6 @@ const Header = () => {
       <ExchangeModal
         visible={openExchangeModal}
         onCancel={() => setOpenExchangeModal(false)}
-        onSuccess={() => {
-          // Có thể refresh data nếu cần
-        }}
       />
     </WrapperHeader>
   );

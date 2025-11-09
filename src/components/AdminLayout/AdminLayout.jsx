@@ -74,17 +74,21 @@ const AdminLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const user = JSON.parse(localStorage.getItem("user"));
+
   const menuItems = [
     {
       key: "/admin/dashboard",
       icon: <DashboardOutlined />,
       label: "Dashboard",
     },
-    {
-      key: "/admin/users",
-      icon: <UserOutlined />,
-      label: "Quản lý User",
-    },
+    user && user.role === "admin"
+      ? {
+          key: "/admin/users",
+          icon: <UserOutlined />,
+          label: "Quản lý User",
+        }
+      : null,
     {
       key: "/admin/products",
       icon: <ShoppingOutlined />,
@@ -95,21 +99,25 @@ const AdminLayout = ({ children }) => {
       icon: <AppstoreOutlined />,
       label: "Quản lý Danh mục",
     },
-    {
-      key: "/admin/inventory",
-      icon: <BarChartOutlined />,
-      label: "Quản lý Kho",
-    },
+    user && user.role !== "seller"
+      ? {
+          key: "/admin/inventory",
+          icon: <BarChartOutlined />,
+          label: "Quản lý Kho",
+        }
+      : null,
     {
       key: "/admin/orders",
       icon: <ShoppingOutlined />,
       label: "Quản lý Đơn hàng",
     },
-    {
-      key: "/admin/exchanges",
-      icon: <SwapOutlined />,
-      label: "Quản lý Đổi hàng",
-    },
+    user && user.role !== "staff"
+      ? {
+          key: "/admin/exchanges",
+          icon: <SwapOutlined />,
+          label: "Quản lý Đổi hàng",
+        }
+      : null,
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -122,16 +130,16 @@ const AdminLayout = ({ children }) => {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-    
+
     // Clear cart và wishlist
     localStorage.removeItem("cart");
     localStorage.removeItem("wishlist");
     localStorage.removeItem("wishlistIds");
-    
+
     // Dispatch events
     window.dispatchEvent(new Event("cartUpdated"));
     window.dispatchEvent(new Event("storage"));
-    
+
     navigate("/login");
   };
 
@@ -178,16 +186,38 @@ const AdminLayout = ({ children }) => {
               onClick={() => setCollapsed(!collapsed)}
               style={{ fontSize: "16px", width: 64, height: 64 }}
             />
-            <Title level={4} style={{ margin: 0 }}>
-              Admin Panel
-            </Title>
+            {user &&
+              ["admin", "staff", "seller"].includes(
+                user.role.toLowerCase()
+              ) && (
+                <Title level={4} style={{ margin: 0 }}>
+                  {user.role === "admin"
+                    ? "Admin"
+                    : user.role === "staff"
+                    ? "Staff"
+                    : "Seller"}{" "}
+                  Panel
+                </Title>
+              )}
           </Space>
 
           <Space size="middle">
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Space style={{ cursor: "pointer" }}>
                 <Avatar icon={<UserOutlined />} />
-                <span>Admin User</span>
+                {user &&
+                  ["admin", "staff", "seller"].includes(
+                    user.role.toLowerCase()
+                  ) && (
+                    <span>
+                      {user.role === "admin"
+                        ? "Admin"
+                        : user.role === "staff"
+                        ? "Staff"
+                        : "Seller"}{" "}
+                      User
+                    </span>
+                  )}
               </Space>
             </Dropdown>
           </Space>
