@@ -304,6 +304,16 @@ const OrderHistory = () => {
                 Giao hàng
               </Tag>
             )}
+            {record.isPaid && (
+              <Tag color="green" style={{ fontSize: 11, marginTop: 4 }}>
+                Đã thanh toán
+              </Tag>
+            )}
+            {status === "Cancelled" && record.cancelReason && (
+              <div style={{ fontSize: 12, color: "#ff4d4f", marginTop: 4 }}>
+                Lý do: {record.cancelReason}
+              </div>
+            )}
           </div>
         );
       },
@@ -376,6 +386,11 @@ const OrderHistory = () => {
             <Tag color="cyan" style={{ marginLeft: 8 }}>
               Đã giao hàng
             </Tag>
+          )}
+          {order.status === "Cancelled" && order.cancelReason && (
+            <div style={{ marginTop: 8, color: "#ff4d4f" }}>
+              Lý do hủy: {order.cancelReason}
+            </div>
           )}
         </Descriptions.Item>
         <Divider orientation="left">Sản phẩm</Divider>

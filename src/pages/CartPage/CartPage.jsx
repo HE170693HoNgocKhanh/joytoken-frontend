@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message } from "antd";
 import CartItem from "./CartItem";
 import {
   CartContainer,
@@ -56,11 +57,20 @@ const CartPage = () => {
   };
 
   const updateQty = (id, variantId, qty) => {
-    const next = cart.map((i) =>
-      i.id === id && i.selectedVariant?._id === variantId
-        ? { ...i, quantity: Math.max(1, qty) }
-        : i
-    );
+    const next = cart.map((i) => {
+      if (i.id === id && i.selectedVariant?._id === variantId) {
+        const maxStock =
+          (typeof i.selectedVariant?.countInStock === "number"
+            ? i.selectedVariant.countInStock
+            : (typeof i.countInStock === "number" ? i.countInStock : 0)) || 0;
+        if (maxStock > 0 && qty > maxStock) {
+          message.warning(`Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho`);
+          return i; // Không thay đổi số lượng
+        }
+        return { ...i, quantity: Math.max(1, qty) };
+      }
+      return i;
+    });
     persist(next);
   };
 

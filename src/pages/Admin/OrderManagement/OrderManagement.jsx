@@ -90,11 +90,51 @@ const OrderManagement = () => {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      await orderService.updateOrderStatus(orderId, { status: newStatus });
+      let payload = { status: newStatus };
+
+      if (newStatus === "Cancelled") {
+        let reasonValue = "";
+        await new Promise((resolve, reject) => {
+          Modal.confirm({
+            title: "Nhập lý do hủy đơn hàng",
+            content: (
+              <TextArea
+                rows={3}
+                placeholder="Vui lòng nhập lý do hủy đơn hàng..."
+                maxLength={500}
+                onChange={(e) => {
+                  reasonValue = e.target.value;
+                }}
+              />
+            ),
+            okText: "Xác nhận hủy",
+            cancelText: "Bỏ qua",
+            onOk: () => {
+              if (!reasonValue || reasonValue.trim() === "") {
+                message.error("Vui lòng nhập lý do hủy đơn hàng.");
+                return Promise.reject();
+              }
+              payload = { status: newStatus, cancelReason: reasonValue.trim() };
+              resolve();
+            },
+            onCancel: () => {
+              reject(new Error("cancelled"));
+            },
+          });
+        });
+      }
+
+      if (selectedOrder && selectedOrder._id === orderId && selectedOrder.paymentMethod) {
+        payload.methodPayment = selectedOrder.paymentMethod;
+      }
+      await orderService.updateOrderStatus(orderId, payload);
       message.success(`Đã cập nhật trạng thái đơn hàng thành ${newStatus}`);
       fetchOrders();
       setDetailModalVisible(false);
     } catch (error) {
+      if (error.message === "cancelled") {
+        return;
+      }
       console.error("Error updating order status:", error);
       message.error(error.response?.data?.message || "Không thể cập nhật trạng thái");
     }
@@ -290,9 +330,9 @@ const OrderManagement = () => {
                 <Descriptions.Item label="Phương thức thanh toán">
                   {selectedOrder.paymentMethod || "N/A"}
                 </Descriptions.Item>
-                {selectedOrder.notes && (
-                  <Descriptions.Item label="Ghi chú" span={2}>
-                    {selectedOrder.notes}
+                {selectedOrder.cancelReason && (
+                  <Descriptions.Item label="Lý do hủy" span={2}>
+                    {selectedOrder.cancelReason}
                   </Descriptions.Item>
                 )}
               </Descriptions>
@@ -342,6 +382,11 @@ const OrderManagement = () => {
                     onClick={() => handleUpdateStatus(selectedOrder._id, "Delivered")}
                   >
                     Đã giao
+                  </Button>
+                )}
+                {selectedOrder.status !== "Cancelled" && (
+                  <Button danger onClick={() => handleUpdateStatus(selectedOrder._id, "Cancelled")}>
+                    Hủy đơn
                   </Button>
                 )}
               </Space>

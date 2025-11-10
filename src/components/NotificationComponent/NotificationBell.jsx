@@ -28,7 +28,17 @@ const NotificationBell = () => {
       fetchNotifications({ limit: 10, unreadOnly: false });
     }, 30000);
 
-    return () => clearInterval(interval);
+    // Lắng nghe sự kiện thủ công để refresh ngay (sau khi đặt hàng/đổi hàng)
+    const refresh = () => {
+      fetchUnreadCount();
+      fetchNotifications({ limit: 10, unreadOnly: false });
+    };
+    window.addEventListener("notificationsUpdated", refresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("notificationsUpdated", refresh);
+    };
   }, []);
 
   const fetchNotifications = async (params = { limit: 10, unreadOnly: false }) => {

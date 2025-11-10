@@ -18,6 +18,7 @@ import {
   Select,
   Alert,
   Button,
+  Input,
 } from "antd";
 import {
   UserOutlined,
@@ -132,6 +133,7 @@ const Dashboard = () => {
     useState(false);
   const [orderToEdit, setOrderToEdit] = useState(null);
   const [newStatus, setNewStatus] = useState("Pending");
+  const [cancelReason, setCancelReason] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user")) || null;
 
@@ -144,20 +146,30 @@ const Dashboard = () => {
   const handleOpenEditStatusModal = (order) => {
     setOrderToEdit(order);
     setNewStatus(order.status); // mặc định status hiện tại
+    setCancelReason(order.cancelReason || "");
     setIsEditStatusModalVisible(true);
   };
 
   const handleCloseEditStatusModal = () => {
     setOrderToEdit(null);
     setIsEditStatusModalVisible(false);
+    setCancelReason("");
   };
   const handleUpdateOrderStatus = async () => {
     if (!orderToEdit) return;
+
+    if (newStatus === "Cancelled" && (!cancelReason || cancelReason.trim() === "")) {
+      messageApi.error("Vui lòng nhập lý do hủy đơn hàng.");
+      return;
+    }
 
     try {
       const requestData = {
         status: newStatus,
         methodPayment: orderToEdit.paymentMethod,
+        ...(newStatus === "Cancelled"
+          ? { cancelReason: cancelReason.trim() }
+          : {}),
       };
 
       await orderService.updateOrderStatus(orderToEdit.id, requestData);
@@ -787,7 +799,12 @@ const Dashboard = () => {
             </label>
             <Select
               value={newStatus}
-              onChange={(value) => setNewStatus(value)}
+              onChange={(value) => {
+                setNewStatus(value);
+                if (value !== "Cancelled") {
+                  setCancelReason("");
+                }
+              }}
               style={{ width: "100%" }}
               placeholder="Chọn trạng thái"
               size="large"
@@ -799,6 +816,27 @@ const Dashboard = () => {
               <Select.Option value="Cancelled">❌ Đã hủy</Select.Option>
             </Select>
           </div>
+          {newStatus === "Cancelled" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontWeight: 500,
+                  marginBottom: 8,
+                  color: "#333",
+                }}
+              >
+                Lý do hủy đơn hàng <span style={{ color: "red" }}>*</span>
+              </label>
+              <Input.TextArea
+                rows={3}
+                placeholder="Nhập lý do hủy đơn hàng..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          )}
           {newStatus && orderToEdit?.status !== newStatus && (
             <Alert
               message="Thay đổi này sẽ cập nhật trạng thái đơn hàng ngay lập tức."

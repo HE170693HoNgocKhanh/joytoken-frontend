@@ -1,4 +1,4 @@
-import LoginPage from "../pages/Login/LoginPage";
+import LoginPage from "../pages/Auth/LoginPage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import OrderPage from "../pages/OrderPage/OrderPage";
 import ProductList from "../pages/ProductsPage/ProductsList";
@@ -6,7 +6,7 @@ import HomePage from "./../pages/HomePage/HomePage";
 import ProductDetailPage from "../pages/ProductDetailPage/ProductDetailPage";
 import CartPage from "../pages/CartPage/CartPage";
 import ChatPage from "../pages/ChatPage/ChatPage";
-import RegisterPage from "../pages/Register/RegisterPage";
+import RegisterPage from "../pages/Auth/RegisterPage";
 
 // Admin Pages
 import Dashboard from "../pages/Admin/Dashboard/Dashboard";
@@ -29,7 +29,7 @@ export const routes = [
   {
     path: "/register",
     page: RegisterPage,
-    isShowHeader: true,
+    isShowHeader: false,
   },
   {
     path: "/order",
@@ -44,7 +44,7 @@ export const routes = [
   {
     path: "/login",
     page: LoginPage,
-    isShowHeader: true,
+    isShowHeader: false,
   },
   {
     path: "/product/:id",

@@ -38,19 +38,23 @@ const InventoryChart = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
 
+  const [totalImported, setTotalImported] = useState(0);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       const response = await userService.getInventoryChartData(year, month);
-      const result = response?.data || { sold: 0, imported: 0, current: 0 };
+      const result = response?.data || { sold: 0, imported: 0, currentStock: 0 };
+      setTotalImported(result.imported || 0);
       setData([
         { name: "Đã bán", value: result.sold || 0 },
         { name: "Đã nhập", value: result.imported || 0 },
-        { name: "Tồn kho", value: result.current || 0 },
+        { name: "Tồn kho", value: result.currentStock || 0 },
       ]);
     } catch (e) {
       console.error("Lỗi tải dữ liệu tồn kho", e);
       setData([]);
+      setTotalImported(0);
     } finally {
       setLoading(false);
     }
@@ -60,8 +64,6 @@ const InventoryChart = () => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
-
-  const total = data.reduce((acc, d) => acc + (d.value || 0), 0);
 
   return (
     <Card
@@ -95,21 +97,33 @@ const InventoryChart = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12}>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie dataKey="value" data={data} cx="50%" cy="50%" outerRadius={110} label>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <Pie 
+                  dataKey="value" 
+                  data={data} 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={90}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  labelLine={false}
+                >
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  wrapperStyle={{ paddingTop: 20 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </Col>
           <Col xs={24} md={12}>
             <div style={{ padding: 16 }}>
-              <Text strong>Tổng số lượng: </Text>
-              <Title level={4} style={{ display: "inline-block", margin: 0 }}>{total.toLocaleString()}</Title>
+              <Text strong>Tổng số lượng đã nhập: </Text>
+              <Title level={4} style={{ display: "inline-block", margin: 0 }}>{totalImported.toLocaleString()}</Title>
               <ul style={{ marginTop: 16 }}>
                 {data.map((d, idx) => (
                   <li key={d.name} style={{ marginBottom: 8 }}>
@@ -118,6 +132,11 @@ const InventoryChart = () => {
                   </li>
                 ))}
               </ul>
+              <div style={{ marginTop: 12, padding: 8, background: "#f6f6f6", borderRadius: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Công thức: Tồn kho = Nhập ({totalImported}) - Bán ({data.find(d => d.name === "Đã bán")?.value || 0}) = {data.find(d => d.name === "Tồn kho")?.value || 0}
+                </Text>
+              </div>
             </div>
           </Col>
         </Row>

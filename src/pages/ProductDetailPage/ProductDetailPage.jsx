@@ -44,11 +44,13 @@ const ProductDetailPage = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [maxReached, setMaxReached] = useState(false);
+  const [quantityError, setQuantityError] = useState(null);
 
-  // 🔁 Khi chọn variant mới => reset quantity về 1
+  //  Khi chọn variant mới => reset quantity về 1
   useEffect(() => {
     setQuantity(1);
     setMaxReached(false);
+    setQuantityError(null);
   }, [selectedVariant]);
 
   const itemsPerSlide = 4;
@@ -246,7 +248,7 @@ const ProductDetailPage = () => {
             {selectedVariant?.countInStock > 0 ? "Còn hàng" : "Hết hàng"}
           </StockStatus>
 
-          {/* 🎯 Chọn variant (màu, size,...) */}
+          {/*  Chọn variant (màu, size,...) */}
           <StyleSelector>
             <div
               style={{
@@ -262,7 +264,7 @@ const ProductDetailPage = () => {
                   onClick={() => {
                     setSelectedVariant(variant);
 
-                    // 👉 Khi chọn variant thứ index → đổi ảnh tương ứng
+                    //  Khi chọn variant thứ index → đổi ảnh tương ứng
                     if (product.images && product.images[index]) {
                       console.log(product.images.length, index);
                       setMainImage(product.images[index]);
@@ -283,7 +285,7 @@ const ProductDetailPage = () => {
                     transition: "all 0.2s ease",
                   }}
                 >
-                  {`${variant.size} - ${variant.color} - ${variant.countInStock}`}
+                  {`${variant.size} - ${variant.color}`}
                 </button>
               ))}
             </div>
@@ -337,10 +339,33 @@ const ProductDetailPage = () => {
                   value={quantity}
                   onChange={(e) => {
                     const value = parseInt(e.target.value, 10);
-                    if (!isNaN(value)) setQuantity(value);
+                    const maxStock =
+                      selectedVariant?.countInStock ?? product.countInStock ?? 0;
+                    if (!isNaN(value)) {
+                      if (maxStock > 0 && value > maxStock) {
+                        setQuantityError(`Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho`);
+                      } else {
+                        setQuantity(value);
+                        if (value < 1) {
+                          setQuantityError("Số lượng phải >= 1");
+                        } else {
+                          setQuantityError(null);
+                        }
+                      }
+                    }
                   }}
                   onBlur={() => {
-                    if (quantity < 1) setQuantity(1);
+                    const maxStock =
+                      selectedVariant?.countInStock ?? product.countInStock ?? 0;
+                    if (quantity < 1) {
+                      setQuantity(1);
+                      setQuantityError("Số lượng phải >= 1");
+                    } else if (maxStock > 0 && quantity > maxStock) {
+                      setQuantity(maxStock);
+                      setQuantityError(`Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho`);
+                    } else {
+                      setQuantityError(null);
+                    }
                   }}
                   style={{
                     width: "60px",
@@ -359,7 +384,12 @@ const ProductDetailPage = () => {
                   onClick={() => {
                     const maxStock =
                       selectedVariant?.countInStock ?? product.countInStock;
-                    setQuantity((prev) => (prev < maxStock ? prev + 1 : prev));
+                    setQuantity((prev) => {
+                      if (prev < maxStock) return prev + 1;
+                      setMessage(`Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho`);
+                      setTimeout(() => setMessage(null), 2000);
+                      return prev;
+                    });
                   }}
                   style={{
                     padding: "6px 12px",
@@ -373,10 +403,14 @@ const ProductDetailPage = () => {
                 </button>
               </div>
 
-              <span style={{ color: "#666" }}>
-                {(selectedVariant?.countInStock ?? product.countInStock) || 0}{" "}
-                sản phẩm có sẵn
+              <span style={{ color: "#e53935" }}>
+                Số lượng tối đa: {(selectedVariant?.countInStock ?? product.countInStock) || 0}
               </span>
+              {quantityError && (
+                <div style={{ color: "#e53935", fontSize: "12px", marginTop: "6px" }}>
+                  {quantityError}
+                </div>
+              )}
             </div>
 
             {/* Thông báo hết hàng */}
@@ -388,7 +422,44 @@ const ProductDetailPage = () => {
           </div>
 
           <ActionWrapper>
-            <AddToCartButton onClick={handleAddToCart}>
+            <AddToCartButton disabled={
+              (() => {
+                const maxStock = selectedVariant?.countInStock ?? product.countInStock ?? 0;
+                return (
+                  !selectedVariant ||
+                  quantity < 1 ||
+                  (maxStock > 0 && quantity > maxStock) ||
+                  !!quantityError
+                );
+              })()
+            } onClick={() => {
+              const maxStock = selectedVariant?.countInStock ?? product.countInStock ?? 0;
+              if (!selectedVariant || quantity < 1 || (maxStock > 0 && quantity > maxStock)) {
+                setQuantityError(
+                  !selectedVariant
+                    ? "Vui lòng chọn phân loại trước khi thêm vào giỏ"
+                    : quantity < 1
+                    ? "Số lượng phải >= 1"
+                    : `Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho`
+                );
+                return;
+              }
+              // Trước khi thêm, đảm bảo không vượt tồn kho tổng đã có trong cart
+              let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+              const existingIndex = cart.findIndex(
+                (item) =>
+                  item.id === product._id &&
+                  item.selectedVariant?._id === selectedVariant?._id
+              );
+              const existingQty = existingIndex !== -1 ? (cart[existingIndex].quantity || 0) : 0;
+              if (maxStock > 0 && existingQty + quantity > maxStock) {
+                const remaining = Math.max(0, maxStock - existingQty);
+                setMessage(`Chỉ được mua tối đa ${maxStock} sản phẩm theo tồn kho. Bạn còn có thể thêm ${remaining}.`);
+                setTimeout(() => setMessage(null), 2500);
+                return;
+              }
+              handleAddToCart();
+            }}>
               🛒 Thêm vào giỏ hàng
             </AddToCartButton>
             <div>

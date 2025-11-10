@@ -194,33 +194,39 @@ const OrderPage = () => {
         return;
       }
 
-      const orderId = result.data._id;
-
-      // ✅ Lưu orderId để hiển thị lại khi refresh page hoặc redirect từ PayOS
-      localStorage.setItem("lastOrderId", orderId);
-
       // === Trường hợp PayOS ===
       if (paymentMethod === "PayOS" && result.payOS?.checkoutUrl) {
+        // Với PayOS: result.data._id là pendingOrder._id, chưa phải Order thực sự
+        const pendingOrderId = result.data._id;
+        
         // Clear các item đã mua trước khi redirect
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));
         window.dispatchEvent(new Event("cartUpdated"));
+        window.dispatchEvent(new Event("notificationsUpdated"));
 
         message.info("Đang chuyển hướng đến PayOS để thanh toán...");
-        localStorage.setItem("pendingOrderId", orderId); // để markPaid sau khi redirect về
+        localStorage.setItem("pendingOrderId", pendingOrderId); // Lưu pendingOrderId để tạo Order sau khi thanh toán
         // Thêm query param orderId để fetch fallback nếu localStorage mất
         const checkoutUrl = new URL(result.payOS.checkoutUrl);
-        checkoutUrl.searchParams.set("orderId", orderId);
+        checkoutUrl.searchParams.set("orderId", pendingOrderId);
         window.location.href = checkoutUrl.toString();
         return;
       }
 
       // === Trường hợp COD ===
+      const orderId = result.data._id;
+      // ✅ Lưu orderId để hiển thị lại khi refresh page (chỉ cho COD)
+      localStorage.setItem("lastOrderId", orderId);
+      // Thông báo cho NotificationBell refetch
+      window.dispatchEvent(new Event("notificationsUpdated"));
+
       if (paymentMethod === "COD") {
         // Clear các item đã mua
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));
         window.dispatchEvent(new Event("cartUpdated"));
+        window.dispatchEvent(new Event("notificationsUpdated"));
 
         navigate("/order-success", {
           state: { order: result.data, paymentMethod: "COD" },

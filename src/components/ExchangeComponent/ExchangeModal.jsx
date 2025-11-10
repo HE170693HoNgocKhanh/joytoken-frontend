@@ -155,7 +155,14 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
   const handleAddExchangeItem = () => {
     const productId = form.getFieldValue("exchangeProductId");
     const variantId = form.getFieldValue("exchangeVariantId");
-    const quantity = form.getFieldValue("exchangeQuantity") || 1;
+    let quantity = form.getFieldValue("exchangeQuantity") || 1;
+
+    // Force validate before proceed (hiển thị lỗi đỏ nếu có)
+    try {
+      form.validateFields(["exchangeQuantity"]);
+    } catch (e) {
+      return;
+    }
 
     if (!productId) {
       message.warning("Vui lòng chọn sản phẩm muốn đổi");
@@ -177,6 +184,16 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
         name = `${product.name} - ${variant.size || ""} ${variant.color || ""}`;
         image = variant.image || product.image;
       }
+    }
+
+    // Validate by stock (không tự động điều chỉnh)
+    const available =
+      (variant && typeof variant.countInStock === "number"
+        ? variant.countInStock
+        : (typeof product.countInStock === "number" ? product.countInStock : 0)) || 0;
+    if (available > 0 && quantity > available) {
+      message.warning(`Chỉ được mua tối đa ${available} sản phẩm theo tồn kho`);
+      return;
     }
 
     const newItem = {
@@ -253,8 +270,10 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
       
       if (response && response.success) {
         message.success(response.message || "Yêu cầu đổi hàng đã được gửi thành công. Seller sẽ xem xét và phản hồi.");
+        window.dispatchEvent(new Event("notificationsUpdated"));
       } else {
         message.success("Yêu cầu đổi hàng đã được gửi thành công. Seller sẽ xem xét và phản hồi.");
+        window.dispatchEvent(new Event("notificationsUpdated"));
       }
       form.resetFields();
       setSelectedOrder(null);
@@ -289,7 +308,21 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
   };
 
   const selectedProductId = Form.useWatch("exchangeProductId", form);
+  const selectedVariantId = Form.useWatch("exchangeVariantId", form);
   const selectedProduct = products.find((p) => p._id === selectedProductId);
+  const selectedVariant =
+    selectedProduct?.variants?.find((v) => v._id === selectedVariantId) || null;
+  const maxExchangeStock =
+    (selectedVariant && typeof selectedVariant.countInStock === "number"
+      ? selectedVariant.countInStock
+      : (typeof selectedProduct?.countInStock === "number"
+          ? selectedProduct.countInStock
+          : 0)) || 0;
+  const exchangeQuantity = Form.useWatch("exchangeQuantity", form);
+  const isExchangeQtyInvalid =
+    !exchangeQuantity ||
+    exchangeQuantity < 1 ||
+    (maxExchangeStock > 0 && exchangeQuantity > maxExchangeStock);
 
   return (
     <Modal
@@ -519,11 +552,53 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
                 </Form.Item>
               )}
 
-            <Form.Item label="Số lượng" name="exchangeQuantity" initialValue={1}>
-              <InputNumber min={1} style={{ width: "100%" }} />
+            <Form.Item
+              label="Số lượng"
+              name="exchangeQuantity"
+              initialValue={1}
+              validateTrigger={['onChange','onBlur']}
+              extra={
+                maxExchangeStock
+                  ? <span style={{ color: "#e53935" }}>Số lượng tối đa: {maxExchangeStock}</span>
+                  : null
+              }
+              rules={[
+                {
+                  validator: (_, value) => {
+                    const v = Number(value || 0);
+                    if (!v || v < 1) return Promise.reject("Số lượng phải >= 1");
+                    if (maxExchangeStock > 0 && v > maxExchangeStock) {
+                      return Promise.reject(
+                        `Tối đa ${maxExchangeStock} theo tồn kho`
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
+            >
+              <InputNumber
+                min={1}
+                max={maxExchangeStock || undefined}
+                style={{ width: "100%" }}
+                onBlur={(e) => {
+                  const raw = Number(e.target.value || 0);
+                  let next = raw;
+                  if (!raw || raw < 1) {
+                    next = 1;
+                    message.warning("Số lượng phải >= 1");
+                  } else if (maxExchangeStock > 0 && raw > maxExchangeStock) {
+                    next = maxExchangeStock;
+                    message.warning(`Chỉ được mua tối đa ${maxExchangeStock} sản phẩm theo tồn kho`);
+                  }
+                  if (next !== raw) {
+                    form.setFieldsValue({ exchangeQuantity: next });
+                  }
+                }}
+              />
             </Form.Item>
 
-            <Button type="dashed" onClick={handleAddExchangeItem} block>
+            <Button type="dashed" onClick={handleAddExchangeItem} disabled={isExchangeQtyInvalid || !selectedProductId} block>
               + Thêm sản phẩm muốn đổi
             </Button>
           </Space>

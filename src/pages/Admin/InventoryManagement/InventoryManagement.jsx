@@ -68,6 +68,7 @@ const InventoryManagement = () => {
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [quantityValues, setQuantityValues] = useState({});
 
   // --- Fetch products ---
   useEffect(() => {
@@ -124,6 +125,7 @@ const InventoryManagement = () => {
     try {
       setStockAction(action);
       form.resetFields();
+      setQuantityValues({});
 
       // ✅ Gọi API lấy chi tiết sản phẩm để có variants
       const res = await productService.getProductById(item.productId);
@@ -165,6 +167,7 @@ const InventoryManagement = () => {
     setSelectedItem(null);
     form.resetFields();
     setSubmitting(false);
+    setQuantityValues({});
   };
 
   const handleStockSubmit = async (values, variantKey, variantName) => {
@@ -173,8 +176,34 @@ const InventoryManagement = () => {
       const quantity = values[`quantity_${variantKey}`];
       const reason = values[`reason_${variantKey}`];
 
-      if (!quantity) {
-        return messageApi.warning("Vui lòng nhập số lượng!");
+      // Validate số lượng
+      if (!quantity || quantity === undefined || quantity === null || quantity === "") {
+        messageApi.warning("Vui lòng nhập số lượng!");
+        setSubmitting(false);
+        return;
+      }
+
+      const numQuantity = Number(quantity);
+      if (isNaN(numQuantity) || numQuantity < 1) {
+        messageApi.warning("Số lượng phải lớn hơn hoặc bằng 1!");
+        setSubmitting(false);
+        return;
+      }
+
+      if (stockAction === "in" && numQuantity > 500) {
+        messageApi.warning("Số lượng nhập kho không được vượt quá 500 sản phẩm!");
+        setSubmitting(false);
+        return;
+      }
+
+      if (stockAction === "out") {
+        const variant = selectedItem?.variants?.find((v) => (v._id || `default_${selectedItem.variants.indexOf(v)}`) === variantKey);
+        const maxStock = variant?.countInStock ?? selectedItem?.countInStock ?? 0;
+        if (numQuantity > maxStock) {
+          messageApi.warning(`Số lượng xuất kho không được vượt quá ${maxStock} sản phẩm!`);
+          setSubmitting(false);
+          return;
+        }
       }
 
       const variantId = variantKey.startsWith("default_") ? null : variantKey;
@@ -731,9 +760,39 @@ const InventoryManagement = () => {
                       {
                         type: "number",
                         min: 1,
-                        message: "Số lượng phải lớn hơn 0!",
+                        message: "Số lượng phải lớn hơn hoặc bằng 1!",
+                      },
+                      {
+                        validator: (_, value) => {
+                          // Bỏ qua validation nếu value rỗng (đã có required rule xử lý)
+                          if (value === undefined || value === null || value === "") {
+                            return Promise.resolve();
+                          }
+                          const numValue = Number(value);
+                          if (isNaN(numValue) || numValue < 1) {
+                            return Promise.reject("Số lượng phải lớn hơn hoặc bằng 1!");
+                          }
+                          // Không validate > 500 ở đây vì đã có cảnh báo trong extra, sẽ validate khi submit
+                          if (stockAction === "out") {
+                            const currentVariant = selectedItem?.variants?.find((v) => (v._id || `default_${selectedItem.variants.indexOf(v)}`) === variantKey);
+                            const maxStock = currentVariant?.countInStock ?? selectedItem?.countInStock ?? 0;
+                            if (numValue > maxStock) {
+                              return Promise.reject("Số lượng xuất kho không được vượt quá tồn kho hiện tại!");
+                            }
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
+                    extra={
+                      stockAction === "in" ? (
+                        quantityValues[`quantity_${variantKey}`] > 500 ? (
+                          <span style={{ color: "#e53935", fontSize: "12px", fontWeight: 500 }}>
+                            ⚠️ Cảnh báo: Số lượng nhập kho không được vượt quá 500 sản phẩm!
+                          </span>
+                        ) : null
+                      ) : null
+                    }
                   >
                     <InputNumber
                       style={{ width: "100%" }}
@@ -743,6 +802,27 @@ const InventoryManagement = () => {
                           ? variant.countInStock ?? selectedItem?.countInStock
                           : undefined
                       }
+                      parser={(value) => {
+                        // Chỉ cho phép số, loại bỏ ký tự không phải số
+                        return value.replace(/\D/g, "");
+                      }}
+                      formatter={(value) => {
+                        // Chỉ hiển thị số
+                        if (!value) return "";
+                        return value.replace(/\D/g, "");
+                      }}
+                      onKeyPress={(e) => {
+                        // Chỉ cho phép nhập số
+                        if (!/[0-9]/.test(e.key) && e.key !== "Backspace" && e.key !== "Delete" && e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(value) => {
+                        setQuantityValues((prev) => ({
+                          ...prev,
+                          [`quantity_${variantKey}`]: value || 0,
+                        }));
+                      }}
                     />
                   </Form.Item>
 
