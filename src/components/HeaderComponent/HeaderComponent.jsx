@@ -248,7 +248,7 @@ const Header = () => {
             <>
               <PhoneOutlined
                 style={{ fontSize: "20px" }}
-                onClick={handleContactStaff}
+                onClick={() => handleContactStaff()}
               />
               <Dropdown menu={{ items }}>
                 <UserOutlined style={{ fontSize: "20px" }} />

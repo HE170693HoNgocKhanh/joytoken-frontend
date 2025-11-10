@@ -19,9 +19,12 @@ import {
   MenuUnfoldOutlined,
   BellOutlined,
   SwapOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
+import { Modal } from "antd";
+import ModalContact from "../ModalComponent/ModalContact";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -73,6 +76,7 @@ const AdminLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -143,6 +147,10 @@ const AdminLayout = ({ children }) => {
     navigate("/login");
   };
 
+  const showModal = () => {
+    setIsModalOpen(true);
+  };
+
   const userMenuItems = [
     {
       key: "profile",
@@ -202,6 +210,14 @@ const AdminLayout = ({ children }) => {
           </Space>
 
           <Space size="middle">
+            <Button
+              type="text"
+              icon={<WhatsAppOutlined />}
+              onClick={showModal}
+              style={{ fontSize: "16px" }}
+            >
+              Liên hệ
+            </Button>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Space style={{ cursor: "pointer" }}>
                 <Avatar icon={<UserOutlined />} />
@@ -225,6 +241,7 @@ const AdminLayout = ({ children }) => {
 
         <StyledContent>{children}</StyledContent>
       </Layout>
+      <ModalContact open={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </StyledLayout>
   );
 };
