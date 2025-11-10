@@ -24,7 +24,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ExportOutlined,
-  SearchOutlined,
+  WechatWorkOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import styled from "styled-components";
@@ -34,6 +34,8 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import { conversationService } from "../../../services/conversationService";
+import { useNavigate } from "react-router-dom";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -58,6 +60,8 @@ const StatCard = styled(Card)`
 `;
 
 const UserManagement = () => {
+  const navigate = useNavigate();
+
   const [messageApi, contextHolder] = message.useMessage(); // ✅ Ant Design v5 message hook
   const [users, setUsers] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -69,6 +73,7 @@ const UserManagement = () => {
 
   // 📦 Lấy danh sách users từ API
   const fetchUsers = async () => {
+    () => handleContact(record._id);
     try {
       setLoading(true);
       const res = await userService.getAllUser();
@@ -160,6 +165,16 @@ const UserManagement = () => {
     } catch (err) {
       console.error(err);
       messageApi.error("Không thể xóa người dùng");
+    }
+  };
+
+  const handleContact = async (id) => {
+    try {
+      const res = await conversationService.createConversation(id);
+      const conversation = res?.data;
+      if (conversation?._id) navigate(`/chat/${conversation._id}`);
+    } catch (error) {
+      console.error("Lỗi tạo hoặc lấy conversation:", error);
     }
   };
 
@@ -274,6 +289,12 @@ const UserManagement = () => {
       width: 120,
       render: (_, record) => (
         <Space>
+          <Button
+            type="text"
+            icon={<WechatWorkOutlined />}
+            onClick={() => handleContact(record._id)}
+            size="small"
+          />
           <Button
             type="text"
             icon={<EditOutlined />}

@@ -52,7 +52,9 @@ export const userService = {
   },
 
   getMonthlyRevenue: async (month) => {
-    const response = await apiClient.get(`/users/revenue/monthly?month=${month}`);
+    const response = await apiClient.get(
+      `/users/revenue/monthly?month=${month}`
+    );
     return response;
   },
 
@@ -88,12 +90,15 @@ export const userService = {
 
   // Wishlist
   getWishlist: async () => {
-    return apiClient.get('/users/wishlist');
+    return apiClient.get("/users/wishlist");
   },
   addToWishlist: async (productId) => {
     return apiClient.post(`/users/wishlist/${productId}`);
   },
   removeFromWishlist: async (productId) => {
     return apiClient.delete(`/users/wishlist/${productId}`);
+  },
+  getStaffSellerAdmin: async () => {
+    return apiClient.get("/users/get-staff-seller-admin");
   },
 };
