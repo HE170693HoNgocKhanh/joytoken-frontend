@@ -74,7 +74,7 @@ const OrderPage = () => {
   }, []);
   
   const taxPrice = itemsPrice * 0.1;
-  const shippingPrice = 3000;
+  const shippingPrice = 0;
   const discountAmount = voucherInfo?.applied || 0;
   const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount;
 
@@ -574,7 +574,7 @@ const OrderPage = () => {
               </SummaryRow>
               <SummaryRow>
                 <span>Phí vận chuyển:</span>
-                <span>₫{shippingPrice.toLocaleString()}</span>
+                <span>3000₫{shippingPrice.toLocaleString()}</span>
               </SummaryRow>
               <TotalRow>
                 <span>Tổng cộng:</span>

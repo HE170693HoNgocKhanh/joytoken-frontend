@@ -209,6 +209,7 @@ const ProductManagement = () => {
       formData.append("name", values.name);
       formData.append("description", values.description);
       // ✅ Bỏ hardcode price=1000, backend sẽ tính từ variants
+      formData.append("price", 1000);
       formData.append("category", values.category);
 
       // Events (đã gộp tags vào) - LUÔN gửi, kể cả mảng rỗng
