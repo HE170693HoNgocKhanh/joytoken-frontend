@@ -365,11 +365,6 @@ const InventoryManagement = () => {
       render: (price) => formatCurrency(price),
     },
     {
-      title: "Nhà cung cấp",
-      dataIndex: "supplier",
-      key: "supplier",
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -384,12 +379,6 @@ const InventoryManagement = () => {
           {getStockStatusText(status)}
         </Tag>
       ),
-    },
-    {
-      title: "Nhập kho cuối",
-      dataIndex: "lastRestocked",
-      key: "lastRestocked",
-      sorter: (a, b) => new Date(a.lastRestocked) - new Date(b.lastRestocked),
     },
     {
       title: "Lịch sử nhập/xuất kho",

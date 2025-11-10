@@ -110,11 +110,11 @@ const AdminLayout = ({ children }) => {
           label: "Quản lý Kho",
         }
       : null,
-    {
-      key: "/admin/orders",
-      icon: <ShoppingOutlined />,
-      label: "Quản lý Đơn hàng",
-    },
+    // {
+    //   key: "/admin/orders",
+    //   icon: <ShoppingOutlined />,
+    //   label: "Quản lý Đơn hàng",
+    // },
     user && user.role !== "staff"
       ? {
           key: "/admin/exchanges",

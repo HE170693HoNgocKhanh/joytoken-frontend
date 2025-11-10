@@ -379,11 +379,8 @@ const OrderPage = () => {
                     required
                   />
                 </FormGroup>
-              </FormGrid>
 
-              {/* ➕ Thêm country và postalCode */}
-              <FormGrid>
-                <FormGroup>
+                 <FormGroup>
                   <label>Quốc gia *</label>
                   <Input
                     type="text"
@@ -394,7 +391,10 @@ const OrderPage = () => {
                     required
                   />
                 </FormGroup>
+              </FormGrid>
 
+              {/* ➕ Thêm country và postalCode */}
+              {/* <FormGrid>
                 <FormGroup>
                   <label>Mã bưu điện *</label>
                   <Input
@@ -406,7 +406,7 @@ const OrderPage = () => {
                     required
                   />
                 </FormGroup>
-              </FormGrid>
+              </FormGrid> */}
             </SectionCard>
 
             {/* 💳 Phương thức thanh toán */}

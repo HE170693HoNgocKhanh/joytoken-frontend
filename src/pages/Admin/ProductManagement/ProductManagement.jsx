@@ -200,16 +200,17 @@ const ProductManagement = () => {
     form.resetFields();
   };
 
-  // 🧩 4️⃣ Submit form thêm / sửa (sửa nhỏ: bỏ hardcode price=1000, dùng variants để tính)
+  // 🧩 4️⃣ Submit form thêm / sửa (sửa: xử lý keptImages, tính minPrice từ variants, bỏ duplicate description)
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
 
       const formData = new FormData();
       formData.append("name", values.name);
-      formData.append("description", values.description);
-      // ✅ Bỏ hardcode price=1000, backend sẽ tính từ variants
-      formData.append("price", 1000);
+      formData.append("description", values.description); // ✅ Bỏ duplicate
+      // ✅ Tính minPrice từ variants thay vì hardcode 1000
+      const minPrice = Math.min(...values.variants.map((v) => v.price || 0));
+      formData.append("price", minPrice);
       formData.append("category", values.category);
 
       // Events (đã gộp tags vào) - LUÔN gửi, kể cả mảng rỗng
@@ -232,17 +233,21 @@ const ProductManagement = () => {
       }
       formData.append("countInStock", totalStock);
 
-      // Ảnh chính
-      if (values.image && values.image.length > 0) {
+      // Ảnh chính (giữ nguyên, chỉ upload nếu có file mới)
+      if (values.image && values.image.length > 0 && values.image[0].originFileObj) {
         formData.append("image", values.image[0].originFileObj);
       }
 
-      // Ảnh phụ
+      // ✅ Xử lý images: gửi keptImages (URLs còn lại) + files mới
+      const keptImages = values.images
+        ?.filter((file) => file.status === "done" && !file.originFileObj)
+        ?.map((file) => file.url) || [];
+      formData.append("keptImages", JSON.stringify(keptImages));
+
       if (values.images && values.images.length > 0) {
-        values.images.forEach((file) => {
-          if (file.originFileObj) {
-            formData.append("images", file.originFileObj);
-          }
+        const newImages = values.images.filter((file) => file.originFileObj);
+        newImages.forEach((file) => {
+          formData.append("images", file.originFileObj);
         });
       }
 
