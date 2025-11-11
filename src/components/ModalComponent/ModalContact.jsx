@@ -13,8 +13,18 @@ const ModalContact = ({ open, onClose }) => {
 
   const fetchUsers = async () => {
     try {
-      const res = await userService.getStaffSellerAdmin();
-      setUsers(res);
+      const currentUser = JSON.parse(localStorage.getItem("user"));
+      const currentUserRole = currentUser?.role;
+      
+      // Nếu user là admin/staff/seller → lấy danh sách admin/staff/seller (loại trừ chính họ)
+      // Nếu user là customer → lấy danh sách staff/seller/admin
+      if (["admin", "staff", "seller"].includes(currentUserRole)) {
+        const res = await userService.getChatableUsers();
+        setUsers(res?.data || res || []);
+      } else {
+        const res = await userService.getStaffSellerAdmin();
+        setUsers(res?.data || res || []);
+      }
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách người dùng:", err);
     }
@@ -41,7 +51,7 @@ const ModalContact = ({ open, onClose }) => {
       open={open}
       onCancel={onClose}
       footer={null}
-      title="Liên hệ với nhân viên"
+      title="Chọn người để chat"
     >
       {users.length > 0 ? (
         users.map((user) => (

@@ -138,9 +138,8 @@ const Header = () => {
 
   const handleContactStaff = async () => {
     try {
-      const res = await conversationService.createConversation(
-        "68fd15a8288145826a47901e"
-      );
+      // User (customer) tự động tạo conversation với seller (không cần receiverId)
+      const res = await conversationService.createConversation();
       const conversation = res?.data;
       if (conversation?._id) navigate(`/chat/${conversation._id}`);
     } catch (error) {

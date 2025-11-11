@@ -1,155 +1,518 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
+import { Modal, Button } from "antd";
+import { userService } from "../../services/userService";
+import { conversationService } from "../../services/conversationService";
+import { useNavigate } from "react-router-dom";
 
 const ChatSidebar = ({
   conversations = [],
   loading,
   selectedId,
   onSelectConversation,
+  currentUser,
+  onConversationCreated,
 }) => {
-  if (loading) {
-    return (
-      <Sidebar>
-        <Header>Đoạn chat</Header>
-        <Loading>Đang tải...</Loading>
-      </Sidebar>
-    );
-  }
+  const navigate = useNavigate();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Kiểm tra xem user có phải admin/staff/seller không
+  const isAdminStaffSeller = currentUser?.role && ["admin", "staff", "seller"].includes(currentUser.role);
+
+  const handleOpenModal = async () => {
+    if (!isAdminStaffSeller) return;
+    setModalVisible(true);
+    setLoadingUsers(true);
+    try {
+      const res = await userService.getChatableUsers();
+      setUsers(res?.data || res || []);
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy danh sách người dùng:", err);
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleContact = async (userId) => {
+    try {
+      const res = await conversationService.createConversation(userId);
+      const conversation = res?.data;
+      if (conversation?._id) {
+        setModalVisible(false);
+        navigate(`/chat/${conversation._id}`);
+        // Refresh conversations list
+        if (onConversationCreated) {
+          onConversationCreated();
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi tạo hoặc lấy conversation:", error);
+    }
+  };
+
   const truncateText = (text, maxLength = 30) => {
     if (!text) return "";
     return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
   };
 
-  return (
-    <Sidebar>
-      <Header>Đoạn chat</Header>
-      <SearchBox placeholder="Tìm kiếm trên Messenger" />
+  // Filter conversations
+  const filteredConversations = conversations.filter((c) => {
+    const matchesSearch = searchQuery === "" || 
+      (c.otherUser?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.lastMessage?.content || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (activeFilter === "unread") {
+      // Giả định: nếu lastMessage không phải từ currentUser thì có thể là unread
+      const isUnread = c.lastMessage?.sender?._id !== currentUser?.id;
+      return matchesSearch && isUnread;
+    }
+    
+    return matchesSearch;
+  });
 
-      <ConversationList>
-        {conversations.length === 0 ? (
-          <EmptyText>Chưa có cuộc trò chuyện nào</EmptyText>
-        ) : (
-          conversations.map((c) => (
-            <ConversationItem
-              key={c._id}
-              $active={selectedId === c._id}
-              onClick={() => onSelectConversation(c)}
-            >
-              <Avatar
-                style={{
-                  backgroundImage: `url(https://api.dicebear.com/9.x/initials/svg?seed=${
-                    c.otherUser?.name || "User"
-                  })`,
-                  backgroundSize: "cover",
+  // Format time
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Vừa xong";
+    if (diffMins < 60) return `${diffMins} phút`;
+    if (diffHours < 24) return `${diffHours} giờ`;
+    if (diffDays < 7) return `${diffDays} ngày`;
+    
+    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  };
+
+  // Check if conversation has unread messages
+  const hasUnread = (conversation) => {
+    return conversation.lastMessage?.sender?._id !== currentUser?.id;
+  };
+
+  if (loading) {
+    return (
+      <Sidebar>
+        <Header>
+          <Title>Đoạn chat</Title>
+          <HeaderIcons>
+            <IconButton title="Tùy chọn">⋯</IconButton>
+            <IconButton title="Mở rộng">⛶</IconButton>
+            {isAdminStaffSeller && (
+              <IconButton onClick={handleOpenModal} title="Tin nhắn mới">✎</IconButton>
+            )}
+            {currentUser && (
+              <UserAvatar 
+                src={currentUser?.avatar || `https://api.dicebear.com/9.x/initials/svg?seed=${currentUser?.name || "User"}`}
+                alt={currentUser?.name || "User"}
+                onError={(e) => {
+                  e.target.src = `https://api.dicebear.com/9.x/initials/svg?seed=${currentUser?.name || "User"}`;
                 }}
               />
-              <div className="info">
-                <div className="name">
-                  {c.otherUser?.name || "Người dùng ẩn danh"}
-                </div>
-                <div className="last">
-                  {truncateText(c?.lastMessage?.content) ||
-                    "Hãy bắt đầu cuộc trò chuyện"}
-                </div>
-              </div>
-              <div className="time">
-                {new Date(c.updatedAt).toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-            </ConversationItem>
-          ))
+            )}
+          </HeaderIcons>
+        </Header>
+        <Loading>Đang tải...</Loading>
+      </Sidebar>
+    );
+  }
+
+  return (
+    <Sidebar>
+      <Header>
+        <Title>Đoạn chat</Title>
+        <HeaderIcons>
+          <IconButton title="Tùy chọn">⋯</IconButton>
+          <IconButton title="Mở rộng">⛶</IconButton>
+          {isAdminStaffSeller && (
+            <IconButton onClick={handleOpenModal} title="Tin nhắn mới">✎</IconButton>
+          )}
+          {currentUser && (
+            <UserAvatar 
+              src={currentUser?.avatar || `https://api.dicebear.com/9.x/initials/svg?seed=${currentUser?.name || "User"}`}
+              alt={currentUser?.name || "User"}
+              onError={(e) => {
+                e.target.src = `https://api.dicebear.com/9.x/initials/svg?seed=${currentUser?.name || "User"}`;
+              }}
+            />
+          )}
+        </HeaderIcons>
+      </Header>
+
+      <SearchContainer>
+        <SearchIcon>🔍</SearchIcon>
+        <SearchBox 
+          placeholder="Tìm kiếm trên Messenger" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </SearchContainer>
+
+      <FilterTabs>
+        <FilterTab 
+          $active={activeFilter === "all"}
+          onClick={() => setActiveFilter("all")}
+        >
+          Tất cả
+        </FilterTab>
+        <FilterTab 
+          $active={activeFilter === "unread"}
+          onClick={() => setActiveFilter("unread")}
+        >
+          Chưa đọc
+        </FilterTab>
+        <FilterTab 
+          $active={activeFilter === "groups"}
+          onClick={() => setActiveFilter("groups")}
+        >
+          Nhóm
+        </FilterTab>
+        <FilterTab>
+          ⋯
+        </FilterTab>
+      </FilterTabs>
+
+      <ConversationList>
+        {filteredConversations.length === 0 ? (
+          <EmptyText>Chưa có cuộc trò chuyện nào</EmptyText>
+        ) : (
+          filteredConversations.map((c) => {
+            const unread = hasUnread(c);
+            const isActive = selectedId === c._id;
+            
+            return (
+            <ConversationItem
+              key={c._id}
+                $active={isActive}
+              onClick={() => onSelectConversation(c)}
+            >
+                <AvatarContainer>
+                  <Avatar
+                    src={c.otherUser?.avatar || `https://api.dicebear.com/9.x/initials/svg?seed=${c.otherUser?.name || "User"}`}
+                    alt={c.otherUser?.name || "User"}
+                    onError={(e) => {
+                      e.target.src = `https://api.dicebear.com/9.x/initials/svg?seed=${c.otherUser?.name || "User"}`;
+                    }}
+                  />
+                </AvatarContainer>
+                <InfoContainer>
+                  <InfoHeader>
+                    <Name>{c.otherUser?.name || "Người dùng ẩn danh"}</Name>
+                    <Time>{formatTime(c.updatedAt)}</Time>
+                  </InfoHeader>
+                  <LastMessage>
+                    {c.lastMessage?.sender?._id === currentUser?.id ? (
+                      <span style={{ color: "#65676b" }}>Bạn: {truncateText(c.lastMessage?.content || "Hãy bắt đầu cuộc trò chuyện", 25)}</span>
+                    ) : (
+                      <span>{truncateText(c.lastMessage?.content || "Hãy bắt đầu cuộc trò chuyện", 25)}</span>
+                    )}
+                  </LastMessage>
+                </InfoContainer>
+                {unread && !isActive && <UnreadDot />}
+              </ConversationItem>
+            );
+          })
         )}
       </ConversationList>
+
+      <Modal
+        title="Chọn người để chat"
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+      >
+        {loadingUsers ? (
+          <div style={{ textAlign: "center", padding: "20px" }}>Đang tải...</div>
+        ) : users.length > 0 ? (
+          users.map((user) => (
+            <div
+              key={user._id}
+                style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "12px 0",
+                borderBottom: "1px solid #f0f0f0",
+                }}
+            >
+              <div>
+                <div style={{ fontWeight: 600 }}>{user.name}</div>
+                <div style={{ fontSize: "12px", color: "#999" }}>
+                  {user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Người bán"}
+                </div>
+              </div>
+              <Button type="primary" size="small" onClick={() => handleContact(user._id)}>
+                Chat
+              </Button>
+              </div>
+          ))
+        ) : (
+          <div style={{ textAlign: "center", padding: "20px", color: "#999" }}>
+            Không có người dùng nào để hiển thị.
+          </div>
+        )}
+      </Modal>
     </Sidebar>
   );
 };
 
 export default ChatSidebar;
 
-// 🎨 Styled Components
+// 🎨 Styled Components - Facebook Messenger Style
 const Sidebar = styled.div`
-  width: 340px;
-  border-right: 1px solid #ddd;
-  background: #fff;
+  width: 360px;
+  border-right: 1px solid #e4e6eb;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 `;
 
 const Header = styled.div`
-  padding: 15px;
-  font-size: 18px;
-  font-weight: 600;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e4e6eb;
+  background: #ffffff;
 `;
 
-const SearchBox = styled.input`
-  margin: 0 12px 10px;
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: none;
-  background: #f0f2f5;
-  outline: none;
+const Title = styled.h1`
+  font-size: 24px;
+  font-weight: 700;
+  color: #050505;
+  margin: 0;
+  line-height: 1.2;
 `;
 
-const ConversationList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-`;
-
-const ConversationItem = styled.div`
+const HeaderIcons = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 15px;
-  background: ${({ $active }) => ($active ? "#f0f2f5" : "transparent")};
+  gap: 8px;
+`;
+
+const IconButton = styled.button`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: 0.2s;
-  border-radius: 8px;
-  margin: 4px 8px;
+  font-size: 20px;
+  color: #050505;
+  transition: background-color 0.2s;
 
   &:hover {
     background: #f0f2f5;
   }
 
-  .info {
-    flex: 1;
-    .name {
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .last {
-      color: #666;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  .time {
-    font-size: 12px;
-    color: #999;
+  &:active {
+    background: #e4e6eb;
   }
 `;
 
-const Avatar = styled.div`
-  width: 42px;
-  height: 42px;
+const UserAvatar = styled.img`
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #ccc;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #e4e6eb;
+  }
+`;
+
+const SearchContainer = styled.div`
+  position: relative;
+  margin: 8px 16px;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 12px;
+  font-size: 16px;
+  color: #8a8d91;
+  pointer-events: none;
+`;
+
+const SearchBox = styled.input`
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border-radius: 20px;
+  border: none;
+  background: #f0f2f5;
+  outline: none;
+  font-size: 15px;
+  color: #050505;
+
+  &::placeholder {
+    color: #8a8d91;
+  }
+
+  &:focus {
+    background: #e4e6eb;
+  }
+`;
+
+const FilterTabs = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const FilterTab = styled.button`
+  padding: 6px 16px;
+  border-radius: 18px;
+  border: none;
+  background: ${({ $active }) => ($active ? "#e7f3ff" : "transparent")};
+  color: ${({ $active }) => ($active ? "#1877f2" : "#65676b")};
+  font-size: 15px;
+  font-weight: ${({ $active }) => ($active ? "600" : "500")};
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? "#e7f3ff" : "#f0f2f5")};
+  }
+`;
+
+const ConversationList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+`;
+
+const ConversationItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: ${({ $active }) => ($active ? "#e7f3ff" : "transparent")};
+  cursor: pointer;
+  transition: background-color 0.15s;
+  position: relative;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? "#e7f3ff" : "#f0f2f5")};
+  }
+`;
+
+const AvatarContainer = styled.div`
+  position: relative;
   flex-shrink: 0;
+`;
+
+const Avatar = styled.img`
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e4e6eb;
+`;
+
+const InfoContainer = styled.div`
+    flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const InfoHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const Name = styled.div`
+      font-weight: 600;
+  font-size: 15px;
+  color: #050505;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+`;
+
+const Time = styled.div`
+    font-size: 12px;
+  color: #65676b;
+  white-space: nowrap;
+  margin-left: 8px;
+`;
+
+const LastMessage = styled.div`
+  font-size: 13px;
+  color: #65676b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const UnreadDot = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1877f2;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
 `;
 
 const Loading = styled.div`
   text-align: center;
   padding: 30px 0;
-  color: #666;
+  color: #65676b;
+  font-size: 15px;
 `;
 
 const EmptyText = styled.div`
   text-align: center;
-  color: #777;
+  color: #65676b;
   margin-top: 40px;
-  font-size: 14px;
+  font-size: 15px;
+  padding: 0 16px;
 `;

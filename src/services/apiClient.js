@@ -37,15 +37,21 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       const errorMessage = error.response?.data?.message || '';
       // Chỉ logout nếu là lỗi authentication thực sự, không phải validation error
-      if (errorMessage.includes('Chưa đăng nhập') || 
+      // Kiểm tra xem có phải là validation error không (thường có message về validation)
+      const isValidationError = errorMessage.includes('không được để trống') ||
+                                errorMessage.includes('không hợp lệ') ||
+                                errorMessage.includes('phải có') ||
+                                errorMessage.includes('Dữ liệu không hợp lệ');
+      
+      if (!isValidationError && (errorMessage.includes('Chưa đăng nhập') || 
           errorMessage.includes('Token') || 
-          errorMessage.includes('token')) {
+          errorMessage.includes('token'))) {
         console.warn('🔒 401 Unauthorized - Token expired or invalid');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        // Chỉ redirect nếu không phải đang ở trang login
-        if (window.location.pathname !== '/login') {
+        // Chỉ redirect nếu không phải đang ở trang login hoặc profile
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/profile') {
           window.location.href = '/login';
         }
       }

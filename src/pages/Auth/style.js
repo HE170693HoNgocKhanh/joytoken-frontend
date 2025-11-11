@@ -289,10 +289,10 @@ export const Tab = styled.button`
   border: none;
   padding: 8px 16px;
   font-size: 16px;
-  color: ${props => props.active ? '#1890ff' : '#666'};
+  color: ${props => props.$active ? '#1890ff' : '#666'};
   cursor: pointer;
-  font-weight: ${props => props.active ? '600' : '400'};
-  border-bottom: ${props => props.active ? '2px solid #1890ff' : '2px solid transparent'};
+  font-weight: ${props => props.$active ? '600' : '400'};
+  border-bottom: ${props => props.$active ? '2px solid #1890ff' : '2px solid transparent'};
   transition: all 0.3s;
 
   &:hover {
