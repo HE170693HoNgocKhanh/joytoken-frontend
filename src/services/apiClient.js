@@ -47,12 +47,29 @@ apiClient.interceptors.response.use(
           errorMessage.includes('Token') || 
           errorMessage.includes('token'))) {
         console.warn('🔒 401 Unauthorized - Token expired or invalid');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        // Chỉ redirect nếu không phải đang ở trang login hoặc profile
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/profile') {
+        
+        // ✅ Danh sách các trang không redirect về login (cho phép xem mà không cần login)
+        const allowedPagesWithoutAuth = [
+          '/login',
+          '/register',
+          '/profile',
+          '/order-success', // ✅ Cho phép xem trang order-success sau khi thanh toán PayOS
+          '/order-failure',
+          '/exchange-payment-success',
+          '/exchange-payment-failure'
+        ];
+        
+        const currentPath = window.location.pathname;
+        const shouldRedirect = !allowedPagesWithoutAuth.includes(currentPath);
+        
+        if (shouldRedirect) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
           window.location.href = '/login';
+        } else {
+          // ✅ Ở các trang được phép, chỉ log warning, không redirect
+          console.warn('⚠️ Token expired but staying on current page:', currentPath);
         }
       }
     }
@@ -62,12 +79,29 @@ apiClient.interceptors.response.use(
       const errorMessage = error.response?.data?.message || 'Token không hợp lệ hoặc hết hạn';
       if (errorMessage.includes('Token không hợp lệ') || errorMessage.includes('hết hạn')) {
         console.warn('🔒 403 Forbidden - Token invalid or expired');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        // Chỉ redirect nếu không phải đang ở trang login
-        if (window.location.pathname !== '/login') {
+        
+        // ✅ Danh sách các trang không redirect về login
+        const allowedPagesWithoutAuth = [
+          '/login',
+          '/register',
+          '/profile',
+          '/order-success', // ✅ Cho phép xem trang order-success sau khi thanh toán PayOS
+          '/order-failure',
+          '/exchange-payment-success',
+          '/exchange-payment-failure'
+        ];
+        
+        const currentPath = window.location.pathname;
+        const shouldRedirect = !allowedPagesWithoutAuth.includes(currentPath);
+        
+        if (shouldRedirect) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
           window.location.href = '/login';
+        } else {
+          // ✅ Ở các trang được phép, chỉ log warning, không redirect
+          console.warn('⚠️ Token invalid but staying on current page:', currentPath);
         }
       } else {
         console.error('❌ Không có quyền truy cập');

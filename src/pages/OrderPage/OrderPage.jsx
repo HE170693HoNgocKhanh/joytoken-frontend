@@ -200,6 +200,22 @@ const OrderPage = () => {
         // Với PayOS: result.data._id là pendingOrder._id, chưa phải Order thực sự
         const pendingOrderId = result.data._id;
         
+        // ✅ Lưu token và user vào sessionStorage trước khi redirect đến PayOS
+        // Điều này đảm bảo token không bị mất khi redirect về từ PayOS
+        const accessToken = localStorage.getItem('accessToken');
+        const refreshToken = localStorage.getItem('refreshToken');
+        const user = localStorage.getItem('user');
+        
+        if (accessToken) {
+          sessionStorage.setItem('accessToken', accessToken);
+        }
+        if (refreshToken) {
+          sessionStorage.setItem('refreshToken', refreshToken);
+        }
+        if (user) {
+          sessionStorage.setItem('user', user);
+        }
+        
         // Clear các item đã mua trước khi redirect
         const remainingCart = cart.filter((item) => !item.selected);
         localStorage.setItem("cart", JSON.stringify(remainingCart));

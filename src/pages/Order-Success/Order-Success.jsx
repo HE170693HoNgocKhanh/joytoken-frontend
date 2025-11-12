@@ -32,6 +32,7 @@ const OrderSuccess = () => {
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false); // ✅ Flag để tránh gọi API nhiều lần
 
   // Lấy orderId fallback
   const pendingOrderId =
@@ -44,9 +45,39 @@ const OrderSuccess = () => {
     const handlePayOSPayment = async () => {
       if (!pendingOrderId) return;
       if (order && order.paymentMethod === "COD") return; // Đã có order COD, không xử lý PayOS
+      if (isProcessingPayment) return; // ✅ Đang xử lý, không gọi lại
+
+      // ✅ Kiểm tra xem đã xử lý payment cho pendingOrderId này chưa
+      const processedKey = `payos_processed_${pendingOrderId}`;
+      if (localStorage.getItem(processedKey)) {
+        console.log("⚠️ Payment đã được xử lý trước đó, bỏ qua");
+        return;
+      }
+
+      // ✅ Kiểm tra token trước khi gọi API
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.warn("⚠️ Không tìm thấy token, thử lấy từ sessionStorage");
+        const sessionToken = sessionStorage.getItem('accessToken');
+        if (sessionToken) {
+          localStorage.setItem('accessToken', sessionToken);
+          const sessionUser = sessionStorage.getItem('user');
+          if (sessionUser) {
+            localStorage.setItem('user', sessionUser);
+          }
+        } else {
+          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem đơn hàng.");
+          return;
+        }
+      }
 
       try {
+        setIsProcessingPayment(true);
         setLoading(true);
+        
+        // ✅ Đánh dấu đã bắt đầu xử lý
+        localStorage.setItem(processedKey, "true");
+        
         // Với PayOS: Gọi updateOrderToPaid để tạo Order từ PendingOrder
         const data = {
           id: pendingOrderId,
@@ -76,22 +107,38 @@ const OrderSuccess = () => {
           window.dispatchEvent(new Event("notificationsUpdated"));
           
           localStorage.removeItem("pendingOrderId");
+          // ✅ Xóa flag sau khi hoàn tất (giữ lại một lúc để tránh race condition)
+          setTimeout(() => localStorage.removeItem(processedKey), 5000);
         } else {
+          // ✅ Nếu lỗi, xóa flag để có thể thử lại
+          localStorage.removeItem(processedKey);
           setError(res.message || "Không thể tạo đơn hàng sau thanh toán");
         }
       } catch (err) {
         console.error("❌ Lỗi khi xử lý thanh toán PayOS:", err);
-        setError(err.response?.data?.message || "Có lỗi xảy ra khi xử lý thanh toán");
+        // ✅ Nếu lỗi, xóa flag để có thể thử lại
+        const processedKey = `payos_processed_${pendingOrderId}`;
+        localStorage.removeItem(processedKey);
+        
+        // ✅ Xử lý lỗi 401/403 một cách graceful - không redirect về login
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          const errorMsg = err.response?.data?.message || "Phiên đăng nhập đã hết hạn";
+          setError(`${errorMsg}. Vui lòng đăng nhập lại để xem đơn hàng.`);
+          // Không redirect, chỉ hiển thị thông báo lỗi
+        } else {
+          setError(err.response?.data?.message || "Có lỗi xảy ra khi xử lý thanh toán");
+        }
       } finally {
         setLoading(false);
+        setIsProcessingPayment(false);
       }
     };
 
     // Chỉ xử lý PayOS nếu chưa có order (order sẽ được tạo từ PendingOrder)
-    if (!order && pendingOrderId) {
+    if (!order && pendingOrderId && !isProcessingPayment) {
       handlePayOSPayment();
     }
-  }, [pendingOrderId, order, user?.email]);
+  }, [pendingOrderId, order, user?.email, isProcessingPayment]);
 
   // Fetch order nếu chưa có (cho COD hoặc các trường hợp khác)
   useEffect(() => {
@@ -161,6 +208,8 @@ const OrderSuccess = () => {
   }
 
   if (error || !order) {
+    const isAuthError = error?.includes("Phiên đăng nhập") || error?.includes("hết hạn");
+    
     return (
       <div
         style={{
@@ -176,9 +225,16 @@ const OrderSuccess = () => {
           type="error"
           showIcon
           action={
-            <Button onClick={() => navigate("/cart")} type="primary">
-              Về giỏ hàng
-            </Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              {isAuthError && (
+                <Button onClick={() => navigate("/login")} type="primary">
+                  Đăng nhập lại
+                </Button>
+              )}
+              <Button onClick={() => navigate("/cart")} type={isAuthError ? "default" : "primary"}>
+                Về giỏ hàng
+              </Button>
+            </div>
           }
         />
       </div>
