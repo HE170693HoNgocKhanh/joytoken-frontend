@@ -101,4 +101,7 @@ export const userService = {
   getStaffSellerAdmin: async () => {
     return apiClient.get("/users/get-staff-seller-admin");
   },
+  getChatableUsers: async () => {
+    return apiClient.get("/users/get-chatable-users");
+  },
 };

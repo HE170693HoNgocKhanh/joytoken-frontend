@@ -100,7 +100,7 @@ const LoginPage = () => {
       <RightSection>
         <FormContainer>
           <TabContainer>
-            <Tab active>Sign In</Tab>
+            <Tab $active>Sign In</Tab>
             <Tab onClick={() => navigate('/register')}>Register</Tab>
           </TabContainer>
 

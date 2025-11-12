@@ -139,16 +139,18 @@ const ProfilePage = () => {
     } catch (error) {
       console.error("❌ Error updating profile:", error);
       
-      // Kiểm tra nếu là lỗi 401/403 authentication thì không hiển thị message (đã redirect)
+      // Chỉ redirect nếu là lỗi authentication thực sự (401/403), không phải validation error (400)
       if (error.response?.status === 401 || error.response?.status === 403) {
         const errorMessage = error.response?.data?.message || '';
         if (errorMessage.includes('Token') || errorMessage.includes('token') || 
             errorMessage.includes('Chưa đăng nhập') || errorMessage.includes('hết hạn')) {
           console.log("🔒 Unauthorized - user will be redirected to login");
+          // Không hiển thị message vì sẽ redirect
           return;
         }
       }
       
+      // Nếu là lỗi validation (400), chỉ hiển thị message, không redirect
       const errorMessage = error.response?.data?.message || error.message || "Cập nhật thông tin thất bại";
       message.error(errorMessage);
     } finally {
@@ -283,7 +285,9 @@ const ProfilePage = () => {
   if (loading && !user) {
     return (
       <div style={{ textAlign: "center", padding: "100px 0" }}>
-        <Spin size="large" tip="Đang tải thông tin..." />
+        <Spin size="large">
+          <div style={{ marginTop: 16, color: "#666" }}>Đang tải thông tin...</div>
+        </Spin>
       </div>
     );
   }
@@ -302,24 +306,36 @@ const ProfilePage = () => {
 
   return (
     <div style={{ padding: "24px", background: "#f5f5f5", minHeight: "100vh" }}>
-      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-        <Title level={2} style={{ marginBottom: 24 }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        <Title level={2} style={{ marginBottom: 24, color: "#1890ff" }}>
+          <UserOutlined style={{ marginRight: 8 }} />
           Thông tin cá nhân
         </Title>
 
         {/* Thông tin tài khoản */}
         {user && (
-          <Card style={{ marginBottom: 24 }}>
-            <Space direction="vertical" style={{ width: "100%" }} size="small">
-              <Text type="secondary">Vai trò:</Text>
-              <Text strong>
-                {user.role === "admin" ? "Quản trị viên" : 
-                 user.role === "seller" ? "Người bán" : 
-                 user.role === "staff" ? "Nhân viên" : 
-                 "Khách hàng"}
-              </Text>
+          <Card 
+            style={{ marginBottom: 24, background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
+            styles={{ body: { color: "#fff" } }}
+          >
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+              <div>
+                <Text style={{ color: "#fff", opacity: 0.9 }}>Vai trò:</Text>
+                <div>
+                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
+                    {user.role === "admin" ? "Quản trị viên" : 
+                     user.role === "seller" ? "Người bán" : 
+                     user.role === "staff" ? "Nhân viên" : 
+                     "Khách hàng"}
+                  </Text>
+                </div>
+              </div>
               {user.emailVerified && (
-                <Text type="success">✓ Email đã được xác thực</Text>
+                <div>
+                  <Text style={{ color: "#52c41a", fontSize: "14px" }}>
+                    ✓ Email đã được xác thực
+                  </Text>
+                </div>
               )}
             </Space>
           </Card>
@@ -329,25 +345,53 @@ const ProfilePage = () => {
           {/* Avatar Section */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <Space direction="vertical" size="large">
-              <Avatar
-                size={120}
-                src={avatarUrl || undefined}
-                icon={!avatarUrl ? <UserOutlined /> : undefined}
-                style={{ 
-                  border: "3px solid #1890ff",
-                  backgroundColor: avatarUrl ? "transparent" : "#1890ff"
-                }}
-              />
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <Avatar
+                  size={120}
+                  src={avatarUrl || undefined}
+                  icon={!avatarUrl ? <UserOutlined /> : undefined}
+                  style={{ 
+                    border: "4px solid #1890ff",
+                    backgroundColor: avatarUrl ? "transparent" : "#1890ff",
+                    boxShadow: "0 4px 12px rgba(24, 144, 255, 0.3)",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    right: 0,
+                    background: "#1890ff",
+                    borderRadius: "50%",
+                    width: "36px",
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                  }}
+                >
+                  <CameraOutlined style={{ color: "#fff", fontSize: "18px" }} />
+                </div>
+              </div>
               <div>
                 <Upload {...uploadProps}>
                   <Button
                     icon={<CameraOutlined />}
                     loading={uploading}
                     type="primary"
+                    size="large"
+                    style={{ borderRadius: "20px", padding: "0 24px" }}
                   >
                     {uploading ? "Đang tải..." : "Đổi ảnh đại diện"}
                   </Button>
                 </Upload>
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
+                    Chỉ chấp nhận file ảnh, tối đa 2MB
+                  </Text>
+                </div>
               </div>
             </Space>
           </div>
@@ -431,23 +475,43 @@ const ProfilePage = () => {
                   label="Số điện thoại"
                   name="phone"
                   rules={[
-                    { pattern: /^[0-9]{10,11}$/, message: "Số điện thoại không hợp lệ" },
+                    {
+                      pattern: /^[0-9]{10,11}$/,
+                      message: "Số điện thoại phải có 10-11 chữ số",
+                    },
                   ]}
+                  help="Nhập số điện thoại 10-11 chữ số (không bắt buộc)"
                 >
                   <Input
                     prefix={<PhoneOutlined />}
-                    placeholder="Nhập số điện thoại"
+                    placeholder="Nhập số điện thoại (10-11 chữ số)"
                     size="large"
+                    allowClear
                   />
                 </Form.Item>
               </Col>
 
               <Col xs={24} md={12}>
-                <Form.Item label="Địa chỉ" name="address">
+                <Form.Item
+                  label="Địa chỉ"
+                  name="address"
+                  rules={[
+                    {
+                      min: 5,
+                      message: "Địa chỉ phải có ít nhất 5 ký tự",
+                    },
+                    {
+                      max: 200,
+                      message: "Địa chỉ không được vượt quá 200 ký tự",
+                    },
+                  ]}
+                  help="Nhập địa chỉ của bạn (tối thiểu 5 ký tự, không bắt buộc)"
+                >
                   <Input
                     prefix={<HomeOutlined />}
                     placeholder="Nhập địa chỉ"
                     size="large"
+                    allowClear
                   />
                 </Form.Item>
               </Col>

@@ -76,9 +76,11 @@ const OrderPage = () => {
   const taxPrice = itemsPrice * 0.1;
   const shippingPrice = 0;
   const discountAmount = voucherInfo?.applied || 0;
-  const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount;
+  //ví dụ : user.coin = 10;(nếu xong code thì có thể làm thêm )
+  //const voucher = 10* 5
+  const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount ; // - voucher 
 
-  // 🛒 Load cart
+  //  Load cart
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("cart") || "[]");
     setCart(saved);
@@ -89,7 +91,7 @@ const OrderPage = () => {
     }
   }, [navigate]);
 
-  // 👤 Load user info nếu có
+  //  Load user info nếu có
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     if (user) {
@@ -109,7 +111,7 @@ const OrderPage = () => {
     }));
   };
 
-  // 🔁 Update số lượng sản phẩm
+  //  Update số lượng sản phẩm
   const updateQuantity = (itemId, variantId, newQuantity) => {
     const maxStock =
       cart.find(
@@ -128,11 +130,11 @@ const OrderPage = () => {
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  // 🧾 Gửi đơn hàng
+  //  Gửi đơn hàng
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ Kiểm tra thông tin giao hàng
+    //  Kiểm tra thông tin giao hàng
     if (
       !shippingAddress.fullName ||
       !shippingAddress.phone ||
@@ -141,8 +143,7 @@ const OrderPage = () => {
       message.error("Vui lòng điền đầy đủ thông tin giao hàng");
       return;
     }
-
-    // ✅ Kiểm tra giỏ hàng
+    //  Kiểm tra giỏ hàng
     if (selectedItems.length === 0) {
       message.error("Giỏ hàng trống");
       navigate("/cart");
@@ -186,7 +187,7 @@ const OrderPage = () => {
         cancelUrl,
       });
 
-      console.log("🧾 Kết quả tạo đơn hàng:", result);
+      console.log(" Kết quả tạo đơn hàng:", result);
 
       if (!result.success) {
         message.error(result.message || "Đặt hàng thất bại");
@@ -216,7 +217,7 @@ const OrderPage = () => {
 
       // === Trường hợp COD ===
       const orderId = result.data._id;
-      // ✅ Lưu orderId để hiển thị lại khi refresh page (chỉ cho COD)
+      //  Lưu orderId để hiển thị lại khi refresh page (chỉ cho COD)
       localStorage.setItem("lastOrderId", orderId);
       // Thông báo cho NotificationBell refetch
       window.dispatchEvent(new Event("notificationsUpdated"));
@@ -328,7 +329,7 @@ const OrderPage = () => {
               </FormGrid>
             </SectionCard>
 
-            {/* 🚚 Địa chỉ giao hàng */}
+            {/*  Địa chỉ giao hàng */}
             <SectionCard>
               <SectionTitle>
                 <IconWrapper>
@@ -409,7 +410,7 @@ const OrderPage = () => {
               </FormGrid> */}
             </SectionCard>
 
-            {/* 💳 Phương thức thanh toán */}
+            {/*  Phương thức thanh toán */}
             <SectionCard>
               <SectionTitle>
                 <IconWrapper>
@@ -470,7 +471,7 @@ const OrderPage = () => {
               </PaymentMethodGroup>
             </SectionCard>
 
-            {/* 🟢 Submit */}
+            {/*  Submit */}
             <SectionCard style={{ marginTop: 0, padding: "1.5rem" }}>
               <ButtonGroup>
                 <BackButton type="button" onClick={() => navigate("/cart")}>
@@ -492,7 +493,7 @@ const OrderPage = () => {
           </form>
         </LeftSection>
 
-        {/* 🧾 Tóm tắt đơn hàng */}
+        {/*  Tóm tắt đơn hàng */}
         <RightSection>
           <SectionTitle>Tóm tắt đơn hàng</SectionTitle>
           <OrderSummary>

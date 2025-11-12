@@ -180,7 +180,7 @@ const RegisterPage = () => {
         <FormContainer>
           <TabContainer>
             <Tab onClick={() => navigate('/login')}>Sign In</Tab>
-            <Tab active>Register</Tab>
+            <Tab $active>Register</Tab>
           </TabContainer>
 
           <FormTitle>Register</FormTitle>
