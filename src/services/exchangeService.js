@@ -64,5 +64,18 @@ export const exchangeService = {
       throw error;
     }
   },
+
+  // Xử lý thanh toán PayOS cho exchange
+  processExchangePayment: async (exchangeId, paymentResult) => {
+    try {
+      const response = await apiClient.put(
+        `/exchanges/${exchangeId}/payment`,
+        paymentResult
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 

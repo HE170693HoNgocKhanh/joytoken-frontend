@@ -92,6 +92,7 @@ const ExchangeManagement = () => {
             duration: 5,
           });
         } else if (response?.data?.newOrder === null) {
+          // Không có chênh lệch giá
           message.success("Yêu cầu đổi hàng đã được duyệt. Không có chênh lệch giá nên không tạo đơn hàng mới.");
         } else {
           message.success("Yêu cầu đổi hàng đã được duyệt.");

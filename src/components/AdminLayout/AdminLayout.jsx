@@ -147,10 +147,6 @@ const AdminLayout = ({ children }) => {
     navigate("/login");
   };
 
-  const showModal = () => {
-    setIsModalOpen(true);
-  };
-
   const userMenuItems = [
     {
       key: "profile",
@@ -174,7 +170,7 @@ const AdminLayout = ({ children }) => {
             alt="Logo"
             style={{ width: 20, height: 20, objectFit: "contain" }}
           />
-          <LogoText level={4}>{collapsed ? "JT" : "JoyToken Admin"}</LogoText>
+          <LogoText level={4}>{collapsed ? "JT" : "oyToken Admin"}</LogoText>
         </LogoContainer>
         <Menu
           theme="dark"
@@ -210,14 +206,18 @@ const AdminLayout = ({ children }) => {
           </Space>
 
           <Space size="middle">
-            <Button
-              type="text"
-              icon={<WhatsAppOutlined />}
-              onClick={showModal}
-              style={{ fontSize: "16px" }}
+            <ModalContact
+              open={isModalOpen}
+              onOpenChange={setIsModalOpen}
             >
-              Liên hệ
-            </Button>
+              <Button
+                type="text"
+                icon={<WhatsAppOutlined />}
+                style={{ fontSize: "16px" }}
+              >
+                Liên hệ
+              </Button>
+            </ModalContact>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Space style={{ cursor: "pointer" }}>
                 <Avatar icon={<UserOutlined />} />
@@ -241,7 +241,6 @@ const AdminLayout = ({ children }) => {
 
         <StyledContent>{children}</StyledContent>
       </Layout>
-      <ModalContact open={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </StyledLayout>
   );
 };

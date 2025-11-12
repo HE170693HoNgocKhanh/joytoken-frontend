@@ -13,6 +13,7 @@ import DrawerCart from "../ProductComponent/DrawerCart";
 import DrawerFavorite from "../ProductComponent/DrawerFavorite";
 import ExchangeModal from "../ExchangeComponent/ExchangeModal";
 import NotificationBell from "../NotificationComponent/NotificationBell";
+import ModalContact from "../ModalComponent/ModalContact";
 import { useWishlist } from "../../hooks/useWishlist";
 import {
   WrapperHeader,
@@ -21,7 +22,6 @@ import {
   WrapperSearch,
   WrapperMenu,
 } from "./style";
-import { conversationService } from "../../services/conversationService";
 
 const { Search } = Input;
 const ADMIN_PANEL_ROLES = ["admin", "seller", "staff"];
@@ -37,6 +37,7 @@ const Header = () => {
   const [openDrawerCart, setOpenDrawerCart] = useState(false);
   const [openDrawerFavorite, setOpenDrawerFavorite] = useState(false);
   const [openExchangeModal, setOpenExchangeModal] = useState(false);
+  const [openContactPopover, setOpenContactPopover] = useState(false);
 
   const [authState, setAuthState] = useState(() => {
     const token = localStorage.getItem("accessToken");
@@ -134,17 +135,6 @@ const Header = () => {
     window.dispatchEvent(new Event("storage"));
 
     navigate("/");
-  };
-
-  const handleContactStaff = async () => {
-    try {
-      // User (customer) tự động tạo conversation với seller (không cần receiverId)
-      const res = await conversationService.createConversation();
-      const conversation = res?.data;
-      if (conversation?._id) navigate(`/chat/${conversation._id}`);
-    } catch (error) {
-      console.error("Lỗi tạo hoặc lấy conversation:", error);
-    }
   };
 
   // --- User Dropdown Menu ---
@@ -245,10 +235,14 @@ const Header = () => {
 
           {token && user ? (
             <>
-              <PhoneOutlined
-                style={{ fontSize: "20px" }}
-                onClick={() => handleContactStaff()}
-              />
+              <ModalContact
+                open={openContactPopover}
+                onOpenChange={setOpenContactPopover}
+              >
+                <span style={{ cursor: "pointer", display: "inline-flex" }}>
+                  <PhoneOutlined style={{ fontSize: "20px" }} />
+                </span>
+              </ModalContact>
               <Dropdown menu={{ items }}>
                 <UserOutlined style={{ fontSize: "20px" }} />
               </Dropdown>

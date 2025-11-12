@@ -269,19 +269,43 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
       console.log("✅ Exchange request sent successfully:", response);
       
       if (response && response.success) {
-        message.success(response.message || "Yêu cầu đổi hàng đã được gửi thành công. Seller sẽ xem xét và phản hồi.");
-        window.dispatchEvent(new Event("notificationsUpdated"));
+        // Kiểm tra xem có payment link PayOS không (có chênh lệch giá và chọn PayOS)
+        if (response.payOS?.checkoutUrl && response.requiresPayment) {
+          message.success({
+            content: "Yêu cầu đổi hàng đã được tạo. Đang chuyển hướng đến PayOS để thanh toán chênh lệch giá...",
+            duration: 3,
+          });
+          
+          // Lưu exchangeId để xử lý sau khi thanh toán
+          if (response.data?._id) {
+            localStorage.setItem("pendingExchangeId", response.data._id);
+          }
+          
+          // Redirect đến PayOS
+          setTimeout(() => {
+            window.location.href = response.payOS.checkoutUrl;
+          }, 1000);
+          return; // Không đóng modal ngay, để redirect
+        } else {
+          // Không có payment link (không có chênh lệch giá hoặc không chọn PayOS)
+          message.success(response.message || "Yêu cầu đổi hàng đã được gửi thành công. Seller sẽ xem xét và phản hồi.");
+          window.dispatchEvent(new Event("notificationsUpdated"));
+        }
       } else {
         message.success("Yêu cầu đổi hàng đã được gửi thành công. Seller sẽ xem xét và phản hồi.");
         window.dispatchEvent(new Event("notificationsUpdated"));
       }
-      form.resetFields();
-      setSelectedOrder(null);
-      setSelectedReturnItems([]);
-      setSelectedExchangeItems([]);
-      setStep(0);
-      onSuccess && onSuccess();
-      onCancel();
+      
+      // Chỉ reset và đóng modal nếu không redirect đến PayOS
+      if (!response?.payOS?.checkoutUrl) {
+        form.resetFields();
+        setSelectedOrder(null);
+        setSelectedReturnItems([]);
+        setSelectedExchangeItems([]);
+        setStep(0);
+        onSuccess && onSuccess();
+        onCancel();
+      }
     } catch (error) {
       console.error("❌ Error creating exchange:", error);
       console.error("Error details:", {

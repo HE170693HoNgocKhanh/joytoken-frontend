@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { Modal, Button } from "antd";
 import { userService } from "../../services/userService";
@@ -17,11 +17,66 @@ const ChatSidebar = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Kiểm tra xem user có phải admin/staff/seller không
   const isAdminStaffSeller = currentUser?.role && ["admin", "staff", "seller"].includes(currentUser.role);
+
+  const availableFilters = useMemo(() => {
+    const role = currentUser?.role?.toLowerCase();
+    switch (role) {
+      case "customer":
+        return [
+          { key: "seller", label: "Người bán", roles: ["seller"] },
+          { key: "admin", label: "Admin", roles: ["admin"] },
+        ];
+      case "staff":
+        return [
+          { key: "seller", label: "Người bán", roles: ["seller"] },
+          { key: "admin", label: "Admin", roles: ["admin"] },
+        ];
+      case "seller":
+        return [
+          { key: "customer", label: "Khách hàng", roles: ["customer"] },
+          { key: "admin", label: "Admin", roles: ["admin"] },
+          { key: "staff", label: "Quản lý kho", roles: ["staff"] },
+        ];
+      case "admin":
+        return [
+          { key: "customer", label: "Khách hàng", roles: ["customer"] },
+          { key: "seller", label: "Người bán", roles: ["seller"] },
+          { key: "staff", label: "Quản lý kho", roles: ["staff"] },
+        ];
+      default:
+        return [
+          { key: "customer", label: "Khách hàng", roles: ["customer"] },
+          { key: "seller", label: "Người bán", roles: ["seller"] },
+          { key: "admin", label: "Admin", roles: ["admin"] },
+          { key: "staff", label: "Quản lý kho", roles: ["staff"] },
+        ];
+    }
+  }, [currentUser?.role]);
+
+  const allowedRoles = useMemo(() => {
+    const roles = availableFilters.flatMap((filter) => filter.roles || []);
+    return Array.from(new Set(roles));
+  }, [availableFilters]);
+
+  useEffect(() => {
+    if (availableFilters.length === 0) {
+      setActiveFilter(null);
+      return;
+    }
+    if (!activeFilter) {
+      setActiveFilter(availableFilters[0].key);
+      return;
+    }
+    const stillValid = availableFilters.some((filter) => filter.key === activeFilter);
+    if (!stillValid) {
+      setActiveFilter(availableFilters[0].key);
+    }
+  }, [availableFilters, activeFilter]);
 
   const handleOpenModal = async () => {
     if (!isAdminStaffSeller) return;
@@ -60,19 +115,20 @@ const ChatSidebar = ({
     return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
   };
 
-  // Filter conversations
   const filteredConversations = conversations.filter((c) => {
     const matchesSearch = searchQuery === "" || 
       (c.otherUser?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.lastMessage?.content || "").toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (activeFilter === "unread") {
-      // Giả định: nếu lastMessage không phải từ currentUser thì có thể là unread
-      const isUnread = c.lastMessage?.sender?._id !== currentUser?.id;
-      return matchesSearch && isUnread;
-    }
-    
-    return matchesSearch;
+
+    const normalizeRole = (c.otherUser?.role || "").toLowerCase();
+    const roleAllowed = allowedRoles.length === 0 || allowedRoles.includes(normalizeRole);
+    if (!roleAllowed) return false;
+
+    const rolesToMatch =
+      availableFilters.find((filter) => filter.key === activeFilter)?.roles || [];
+    const matchesRole = rolesToMatch.length === 0 || rolesToMatch.includes(normalizeRole);
+
+    return matchesSearch && matchesRole;
   });
 
   // Format time
@@ -157,27 +213,15 @@ const ChatSidebar = ({
       </SearchContainer>
 
       <FilterTabs>
-        <FilterTab 
-          $active={activeFilter === "all"}
-          onClick={() => setActiveFilter("all")}
-        >
-          Tất cả
-        </FilterTab>
-        <FilterTab 
-          $active={activeFilter === "unread"}
-          onClick={() => setActiveFilter("unread")}
-        >
-          Chưa đọc
-        </FilterTab>
-        <FilterTab 
-          $active={activeFilter === "groups"}
-          onClick={() => setActiveFilter("groups")}
-        >
-          Nhóm
-        </FilterTab>
-        <FilterTab>
-          ⋯
-        </FilterTab>
+        {availableFilters.map((filter) => (
+          <FilterTab
+            key={filter.key}
+            $active={activeFilter === filter.key}
+            onClick={() => setActiveFilter(filter.key)}
+          >
+            {filter.label}
+          </FilterTab>
+        ))}
       </FilterTabs>
 
       <ConversationList>
@@ -205,7 +249,10 @@ const ChatSidebar = ({
                 </AvatarContainer>
                 <InfoContainer>
                   <InfoHeader>
-                    <Name>{c.otherUser?.name || "Người dùng ẩn danh"}</Name>
+                    <NameWrapper>
+                      <Name>{c.otherUser?.name || "Người dùng ẩn danh"}</Name>
+                      {c.otherUser?.role === "staff" && <RoleBadge>Quản lý kho</RoleBadge>}
+                    </NameWrapper>
                     <Time>{formatTime(c.updatedAt)}</Time>
                   </InfoHeader>
                   <LastMessage>
@@ -246,7 +293,11 @@ const ChatSidebar = ({
               <div>
                 <div style={{ fontWeight: 600 }}>{user.name}</div>
                 <div style={{ fontSize: "12px", color: "#999" }}>
-                  {user.role === "admin" ? "Quản trị viên" : user.role === "staff" ? "Nhân viên" : "Người bán"}
+                  {user.role === "admin"
+                    ? "Quản trị viên"
+                    : user.role === "staff"
+                    ? "Quản lý kho"
+                    : "Người bán"}
                 </div>
               </div>
               <Button type="primary" size="small" onClick={() => handleContact(user._id)}>
@@ -467,6 +518,14 @@ const InfoHeader = styled.div`
   align-items: center;
 `;
 
+const NameWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+`;
+
 const Name = styled.div`
       font-weight: 600;
   font-size: 15px;
@@ -474,6 +533,18 @@ const Name = styled.div`
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+`;
+
+const RoleBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #eef3ff;
+  color: #275efe;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 `;
 
 const Time = styled.div`

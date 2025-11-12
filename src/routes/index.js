@@ -20,6 +20,8 @@ import OrderSuccess from "../pages/Order-Success/Order-Success";
 import OrderFailure from "../pages/OrderFailure/Order-Failure";
 import OrderHistory from "../pages/OrderHistory/OrderHistory";
 import ProfilePage from "../pages/Profile/ProfilePage";
+import ExchangePaymentSuccess from "../pages/ExchangePaymentSuccess/ExchangePaymentSuccess";
+import ExchangePaymentFailure from "../pages/ExchangePaymentFailure/ExchangePaymentFailure";
 export const routes = [
   {
     path: "/",
@@ -69,6 +71,16 @@ export const routes = [
   {
     path: "/order-history",
     page: OrderHistory,
+    isShowHeader: true,
+  },
+  {
+    path: "/exchange-payment-success",
+    page: ExchangePaymentSuccess,
+    isShowHeader: true,
+  },
+  {
+    path: "/exchange-payment-failure",
+    page: ExchangePaymentFailure,
     isShowHeader: true,
   },
   {

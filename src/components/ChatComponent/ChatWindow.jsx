@@ -40,9 +40,13 @@ const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
           <HeaderInfo>
             <HeaderName>{otherUser?.name || "Người dùng ẩn danh"}</HeaderName>
             <HeaderStatus>
-              {otherUser?.role === "admin" ? "Quản trị viên" : 
-               otherUser?.role === "staff" ? "Nhân viên" : 
-               otherUser?.role === "seller" ? "Người bán" : "Khách hàng"}
+              {otherUser?.role === "admin"
+                ? "Quản trị viên"
+                : otherUser?.role === "staff"
+                ? "Quản lý kho"
+                : otherUser?.role === "seller"
+                ? "Người bán"
+                : "Khách hàng"}
             </HeaderStatus>
           </HeaderInfo>
         </HeaderLeft>

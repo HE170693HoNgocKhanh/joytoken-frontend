@@ -36,3 +36,123 @@ code {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+
+/* Contact popover styling */
+.contact-popover .ant-popover-inner {
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+}
+
+.contact-popover-content {
+  width: 360px;
+  max-height: 560px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 18px 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 100%);
+}
+
+.contact-popover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.contact-popover-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.contact-popover-tabs {
+  background: rgba(59, 130, 246, 0.12);
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.contact-popover-tabs .ant-segmented-item {
+  font-weight: 500;
+}
+
+.contact-popover-tabs .ant-segmented-item-selected {
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.28);
+  color: #1d4ed8;
+}
+
+.contact-popover-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 360px;
+  padding-right: 2px;
+}
+
+.contact-conversation-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.contact-conversation-row:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 12px;
+}
+
+.contact-conversation-row--unread .contact-conversation-message {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.contact-conversation-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contact-conversation-row-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.contact-conversation-role {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.contact-conversation-time {
+  margin-left: auto;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.contact-conversation-arrow {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.contact-conversation-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.2) 0%,
+    rgba(148, 163, 184, 0.6) 50%,
+    rgba(148, 163, 184, 0.2) 100%
+  );
+  margin: 0 8px;
+}
