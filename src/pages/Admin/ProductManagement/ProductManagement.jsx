@@ -153,6 +153,7 @@ const ProductManagement = () => {
           label: editingProduct.label || null,
           variants: editingProduct.variants?.length
             ? editingProduct.variants.map((v) => ({
+                _id: v._id,
                 size: v.size,
                 color: v.color,
                 price: v.price,
