@@ -55,18 +55,20 @@ const OrderSuccess = () => {
       }
 
       // ✅ Kiểm tra token trước khi gọi API
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
       if (!token) {
         console.warn("⚠️ Không tìm thấy token, thử lấy từ sessionStorage");
-        const sessionToken = sessionStorage.getItem('accessToken');
+        const sessionToken = sessionStorage.getItem("accessToken");
         if (sessionToken) {
-          localStorage.setItem('accessToken', sessionToken);
-          const sessionUser = sessionStorage.getItem('user');
+          localStorage.setItem("accessToken", sessionToken);
+          const sessionUser = sessionStorage.getItem("user");
           if (sessionUser) {
-            localStorage.setItem('user', sessionUser);
+            localStorage.setItem("user", sessionUser);
           }
         } else {
-          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem đơn hàng.");
+          setError(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem đơn hàng."
+          );
           return;
         }
       }
@@ -74,10 +76,10 @@ const OrderSuccess = () => {
       try {
         setIsProcessingPayment(true);
         setLoading(true);
-        
+
         // ✅ Đánh dấu đã bắt đầu xử lý
         localStorage.setItem(processedKey, "true");
-        
+
         // Với PayOS: Gọi updateOrderToPaid để tạo Order từ PendingOrder
         const data = {
           id: pendingOrderId,
@@ -86,26 +88,38 @@ const OrderSuccess = () => {
           email_address: user?.email,
         };
         const res = await orderService.updateOrderToPaid(pendingOrderId, data);
-        
+
         if (res.success && res.data) {
           console.log("✅ Thanh toán hoàn tất, đơn hàng đã được tạo:", res);
           setOrder(res.data);
-          
+
           // Xóa cart sau khi thanh toán thành công
           const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-          const orderProductIds = res.data.items.map(item => item.productId?._id || item.productId);
+          const orderProductIds = res.data.items.map(
+            (item) => item.productId?._id || item.productId
+          );
           const remainingCart = cart.filter((item) => {
-            const itemProductId = item.id || item.productId;
-            return !orderProductIds.some(orderId => {
-              const orderIdStr = typeof orderId === 'object' ? orderId.toString() : orderId;
-              const itemIdStr = itemProductId?.toString();
-              return orderIdStr === itemIdStr;
+            return !res.data.items.some((orderItem) => {
+              const orderVariantId = orderItem.variant?._id;
+              const itemVariantId = item.selectedVariant?._id;
+              const orderProductId =
+                orderItem.productId?._id || orderItem.productId;
+              const itemProductId = item.id || item.productId;
+
+              if (orderVariantId) {
+                // Nếu order có variant, chỉ xóa đúng variant đó
+                return orderVariantId === itemVariantId;
+              } else {
+                // Nếu order không có variant, xóa theo productId
+                return orderProductId === itemProductId;
+              }
             });
           });
+
           localStorage.setItem("cart", JSON.stringify(remainingCart));
           window.dispatchEvent(new Event("cartUpdated"));
           window.dispatchEvent(new Event("notificationsUpdated"));
-          
+
           localStorage.removeItem("pendingOrderId");
           // ✅ Xóa flag sau khi hoàn tất (giữ lại một lúc để tránh race condition)
           setTimeout(() => localStorage.removeItem(processedKey), 5000);
@@ -119,14 +133,17 @@ const OrderSuccess = () => {
         // ✅ Nếu lỗi, xóa flag để có thể thử lại
         const processedKey = `payos_processed_${pendingOrderId}`;
         localStorage.removeItem(processedKey);
-        
+
         // ✅ Xử lý lỗi 401/403 một cách graceful - không redirect về login
         if (err.response?.status === 401 || err.response?.status === 403) {
-          const errorMsg = err.response?.data?.message || "Phiên đăng nhập đã hết hạn";
+          const errorMsg =
+            err.response?.data?.message || "Phiên đăng nhập đã hết hạn";
           setError(`${errorMsg}. Vui lòng đăng nhập lại để xem đơn hàng.`);
           // Không redirect, chỉ hiển thị thông báo lỗi
         } else {
-          setError(err.response?.data?.message || "Có lỗi xảy ra khi xử lý thanh toán");
+          setError(
+            err.response?.data?.message || "Có lỗi xảy ra khi xử lý thanh toán"
+          );
         }
       } finally {
         setLoading(false);
@@ -145,7 +162,10 @@ const OrderSuccess = () => {
     const fetchOrder = async () => {
       if (!order && pendingOrderId) {
         // Bỏ qua nếu đang xử lý PayOS (đã có useEffect riêng)
-        if (location.search.includes("orderId") || localStorage.getItem("pendingOrderId")) {
+        if (
+          location.search.includes("orderId") ||
+          localStorage.getItem("pendingOrderId")
+        ) {
           return; // PayOS sẽ được xử lý bởi useEffect khác
         }
 
@@ -154,15 +174,18 @@ const OrderSuccess = () => {
           const res = await orderService.getOrderById(pendingOrderId);
           if (res.success) {
             setOrder(res.data);
-            
+
             // Nếu là COD và chưa xóa cart, xóa cart ngay
             if (res.data.paymentMethod === "COD") {
               const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-              const orderProductIds = res.data.items.map(item => item.productId?._id || item.productId);
+              const orderProductIds = res.data.items.map(
+                (item) => item.productId?._id || item.productId
+              );
               const remainingCart = cart.filter((item) => {
                 const itemProductId = item.id || item.productId;
-                return !orderProductIds.some(orderId => {
-                  const orderIdStr = typeof orderId === 'object' ? orderId.toString() : orderId;
+                return !orderProductIds.some((orderId) => {
+                  const orderIdStr =
+                    typeof orderId === "object" ? orderId.toString() : orderId;
                   const itemIdStr = itemProductId?.toString();
                   return orderIdStr === itemIdStr;
                 });
@@ -208,8 +231,9 @@ const OrderSuccess = () => {
   }
 
   if (error || !order) {
-    const isAuthError = error?.includes("Phiên đăng nhập") || error?.includes("hết hạn");
-    
+    const isAuthError =
+      error?.includes("Phiên đăng nhập") || error?.includes("hết hạn");
+
     return (
       <div
         style={{
@@ -231,7 +255,10 @@ const OrderSuccess = () => {
                   Đăng nhập lại
                 </Button>
               )}
-              <Button onClick={() => navigate("/cart")} type={isAuthError ? "default" : "primary"}>
+              <Button
+                onClick={() => navigate("/cart")}
+                type={isAuthError ? "default" : "primary"}
+              >
                 Về giỏ hàng
               </Button>
             </div>

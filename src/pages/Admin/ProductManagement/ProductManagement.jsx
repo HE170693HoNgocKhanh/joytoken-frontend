@@ -19,6 +19,7 @@ import {
   Spin,
   Upload,
   Checkbox,
+  Tooltip,
 } from "antd";
 import {
   EditOutlined,
@@ -27,22 +28,20 @@ import {
   EyeOutlined,
   UploadOutlined,
   MinusCircleOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import styled from "styled-components";
 import { productService } from "../../../services/productService";
 import { categoryService } from "../../../services/categoryService";
-
 const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
-
 const StyledCard = styled(Card)`
   .ant-card-body {
     padding: 24px;
   }
 `;
-
 const ProductManagement = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [products, setProducts] = useState([]);
@@ -53,13 +52,15 @@ const ProductManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "null");
-
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [originalStocks, setOriginalStocks] = useState({}); // ✅ Lưu stock gốc theo index
+  const [stockChanges, setStockChanges] = useState({});
 
+  const [noteModal, setNoteModal] = useState({ visible: false, index: null });
+  const [currentNote, setCurrentNote] = useState(""); // ✅ Local state cho note input trong modal
   const SIZES = ["Lớn", "Trung Bình", "Nhỏ"];
-
   // Danh sách sự kiện và tags (đã gộp chung)
   const EVENT_OPTIONS = [
     { label: "Sinh nhật", value: "birthday" },
@@ -81,7 +82,6 @@ const ProductManagement = () => {
     { label: "Mới", value: "mới" },
     { label: "Hot", value: "hot" },
   ];
-
   // 🧩 1️⃣ Lấy danh sách sản phẩm (đã sửa để hỗ trợ pagination và search server-side)
   const fetchProducts = async () => {
     try {
@@ -91,7 +91,6 @@ const ProductManagement = () => {
         limit: pageSize,
         search: searchText,
       });
-
       console.log("🚀 Fetched products:", res.data);
       setProducts(res.data || []); // ✅ Lấy mảng products từ res.data.data
       setTotal(res.data.pagination?.total || 0); // ✅ Lấy total từ res.data.pagination.total
@@ -104,7 +103,6 @@ const ProductManagement = () => {
       setLoading(false);
     }
   };
-
   // 🧩 2️⃣ Lấy danh sách danh mục
   const fetchCategories = async () => {
     try {
@@ -115,24 +113,21 @@ const ProductManagement = () => {
       messageApi.error("Không thể tải danh mục!");
     }
   };
-
   // ✅ useEffect cho products: refetch khi page, pageSize, searchText thay đổi
   useEffect(() => {
     fetchProducts();
   }, [page, pageSize, searchText]);
-
   // ✅ useEffect cho categories: chỉ chạy 1 lần
   useEffect(() => {
     fetchCategories();
   }, []);
-
   // 🧩 3️⃣ Mở modal thêm / sửa
   const showModal = (product = null) => {
     setEditingProduct(product);
     setIsModalVisible(true);
     form.resetFields();
+    setOriginalStocks({}); // ✅ Reset originals
   };
-
   useEffect(() => {
     if (isModalVisible) {
       if (editingProduct) {
@@ -158,6 +153,7 @@ const ProductManagement = () => {
                 color: v.color,
                 price: v.price,
                 countInStock: v.countInStock,
+                note: v.note || "", // ✅ Thêm note từ server
               }))
             : [{}],
           image: editingProduct.image
@@ -179,6 +175,18 @@ const ProductManagement = () => {
               }))
             : [],
         });
+        // ✅ Set originals sau setFieldsValue (sử dụng setTimeout để đảm bảo form updated)
+        setTimeout(() => {
+          const variants = form.getFieldValue("variants") || [];
+          const originals = {};
+          variants.forEach((v, i) => {
+            if (v._id) {
+              // Chỉ cho existing variants
+              originals[i] = v.countInStock;
+            }
+          });
+          setOriginalStocks(originals);
+        }, 0);
       } else {
         // Thêm mới: reset form
         form.resetFields();
@@ -191,21 +199,30 @@ const ProductManagement = () => {
           isNew: false,
           isBackInStock: false,
         });
+        setOriginalStocks({}); // Không có originals cho new
       }
     }
   }, [isModalVisible, editingProduct, form]);
-
   const handleCancel = () => {
     setIsModalVisible(false);
     setEditingProduct(null);
     form.resetFields();
+    setOriginalStocks({});
   };
-
+  const handleOpenNote = (index) => {
+    const current = form.getFieldValue(["variants", index, "note"]) || "";
+    setCurrentNote(current); // ✅ Lấy note hiện tại từ form và set vào local state
+    setNoteModal({ visible: true, index });
+  };
+  const handleSaveNote = (text, index) => {
+    form.setFieldValue(["variants", index, "note"], text); // ✅ Lưu note vào form field
+    setNoteModal({ visible: false, index: null });
+    setCurrentNote(""); // ✅ Reset local state
+  };
   // 🧩 4️⃣ Submit form thêm / sửa (sửa: xử lý keptImages, tính minPrice từ variants, bỏ duplicate description)
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-
       const formData = new FormData();
       formData.append("name", values.name);
       formData.append("description", values.description); // ✅ Bỏ duplicate
@@ -213,60 +230,54 @@ const ProductManagement = () => {
       const minPrice = Math.min(...values.variants.map((v) => v.price || 0));
       formData.append("price", minPrice);
       formData.append("category", values.category);
-
       // Events (đã gộp tags vào) - LUÔN gửi, kể cả mảng rỗng
       formData.append("events", JSON.stringify(values.events || []));
-
       // Flags - LUÔN gửi
       formData.append("isBestSeller", values.isBestSeller ? "true" : "false");
       formData.append("isNew", values.isNew ? "true" : "false");
       formData.append("isBackInStock", values.isBackInStock ? "true" : "false");
-
       // Label - gửi rỗng nếu không có
       formData.append("label", values.label || "");
-
       let totalStock = 0;
       if (values.variants && values.variants.length > 0) {
         values.variants.forEach((v) => {
           totalStock += v.countInStock || 0;
-          formData.append("variants", JSON.stringify(v));
+          formData.append("variants", JSON.stringify(v)); // ✅ v giờ có note
         });
       }
       formData.append("countInStock", totalStock);
-
       // Ảnh chính (giữ nguyên, chỉ upload nếu có file mới)
-      if (values.image && values.image.length > 0 && values.image[0].originFileObj) {
+      if (
+        values.image &&
+        values.image.length > 0 &&
+        values.image[0].originFileObj
+      ) {
         formData.append("image", values.image[0].originFileObj);
       }
-
       // ✅ Xử lý images: gửi keptImages (URLs còn lại) + files mới
-      const keptImages = values.images
-        ?.filter((file) => file.status === "done" && !file.originFileObj)
-        ?.map((file) => file.url) || [];
+      const keptImages =
+        values.images
+          ?.filter((file) => file.status === "done" && !file.originFileObj)
+          ?.map((file) => file.url) || [];
       formData.append("keptImages", JSON.stringify(keptImages));
-
       if (values.images && values.images.length > 0) {
         const newImages = values.images.filter((file) => file.originFileObj);
         newImages.forEach((file) => {
           formData.append("images", file.originFileObj);
         });
       }
-
       console.log("📦 FormData entries:");
       for (let [key, val] of formData.entries()) {
         console.log(key, val);
       }
-
       let res;
       if (editingProduct) {
         res = await productService.updateProduct(editingProduct._id, formData);
       } else {
         res = await productService.createProduct(formData);
       }
-
       handleCancel();
       fetchProducts(); // Refetch sau khi tạo/cập nhật
-
       messageApi.success(
         editingProduct
           ? "Cập nhật sản phẩm thành công"
@@ -277,7 +288,6 @@ const ProductManagement = () => {
       messageApi.error("Lỗi khi lưu sản phẩm!");
     }
   };
-
   // 🧩 5️⃣ Xóa sản phẩm
   const handleDelete = async (id) => {
     try {
@@ -292,7 +302,6 @@ const ProductManagement = () => {
       setLoading(false);
     }
   };
-
   // 🧩 6️⃣ Cột table (giữ nguyên)
   const columns = [
     {
@@ -372,7 +381,6 @@ const ProductManagement = () => {
       key: "status",
       render: (_, record) => {
         const stock = record.countInStock;
-
         if (stock > 10) {
           return <Tag color="green">Còn hàng</Tag>;
         } else if (stock > 0 && stock <= 10) {
@@ -418,7 +426,6 @@ const ProductManagement = () => {
       ),
     },
   ];
-
   // 🧩 7️⃣ JSX render (sửa search và table pagination)
   return (
     <div>
@@ -443,7 +450,6 @@ const ProductManagement = () => {
             Thêm Sản phẩm
           </Button>
         </Row>
-
         <Spin spinning={loading}>
           <Table
             columns={columns}
@@ -464,7 +470,6 @@ const ProductManagement = () => {
           />
         </Spin>
       </StyledCard>
-
       {/* Modal Form (giữ nguyên) */}
       <Modal
         title={editingProduct ? "Chỉnh sửa Sản phẩm" : "Thêm Sản phẩm mới"}
@@ -506,11 +511,9 @@ const ProductManagement = () => {
               </Form.Item>
             </Col>
           </Row>
-
           <Form.Item name="description" label="Mô tả">
             <TextArea rows={3} placeholder="Nhập mô tả sản phẩm..." />
           </Form.Item>
-
           <Form.Item name="events" label="Sự kiện & Tags">
             <Select
               mode="tags"
@@ -525,7 +528,6 @@ const ProductManagement = () => {
               ))}
             </Select>
           </Form.Item>
-
           <Row gutter={16}>
             <Col span={6}>
               <Form.Item name="isBestSeller" valuePropName="checked">
@@ -553,83 +555,137 @@ const ProductManagement = () => {
               </Form.Item>
             </Col>
           </Row>
-
           <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
             Phiên bản
           </Typography.Text>
-
           <Form.List name="variants">
             {(fields, { add, remove }) => (
               <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Row
-                    gutter={16}
-                    key={key}
-                    align="middle"
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Col span={5}>
-                      <Form.Item
-                        {...restField}
-                        name={[name, "size"]}
-                        rules={[{ required: true, message: "Chọn size" }]}
-                      >
-                        <Select placeholder="Chọn size">
-                          {SIZES.map((size) => (
-                            <Option key={size} value={size}>
-                              {size}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item
-                        {...restField}
-                        name={[name, "color"]}
-                        rules={[{ required: true, message: "Nhập màu" }]}
-                      >
-                        <Input placeholder="Nhập màu" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={5}>
-                      <Form.Item
-                        {...restField}
-                        name={[name, "price"]}
-                        rules={[{ required: true, message: "Nhập giá" }]}
-                      >
-                        <InputNumber
-                          placeholder="Nhập giá"
-                          style={{ width: "100%" }}
-                          min={0}
-                          formatter={(v) =>
-                            `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                          }
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={5}>
-                      <Form.Item
-                        {...restField}
-                        name={[name, "countInStock"]}
-                        rules={[{ required: true, message: "Nhập tồn kho" }]}
-                      >
-                        <InputNumber
-                          style={{ width: "100%" }}
-                          min={0}
-                          placeholder="Nhập tồn kho"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={1}>
-                      <MinusCircleOutlined
-                        onClick={() => remove(name)}
-                        style={{ fontSize: 20, color: "red", marginBottom: 23 }}
-                      />
-                    </Col>
-                  </Row>
-                ))}
+                {fields.map(({ key, name, ...restField }, index) => {
+                  // ✅ Lấy note từ form để check và hiển thị
+                  const variantNote = form.getFieldValue([
+                    "variants",
+                    index,
+                    "note",
+                  ]);
+                  const hasId = form.getFieldValue(["variants", index, "_id"]);
+                  const currentStock = form.getFieldValue([
+                    "variants",
+                    index,
+                    "countInStock",
+                  ]);
+                  const originalStock = originalStocks[index];
+                  const isChanged =
+                    hasId &&
+                    originalStock !== undefined &&
+                    currentStock !== originalStock;
+                  return (
+                    <Row
+                      gutter={16}
+                      key={key}
+                      align="middle"
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Col span={5}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "size"]}
+                          rules={[{ required: true, message: "Chọn size" }]}
+                        >
+                          <Select placeholder="Chọn size">
+                            {SIZES.map((size) => (
+                              <Option key={size} value={size}>
+                                {size}
+                              </Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "color"]}
+                          rules={[{ required: true, message: "Nhập màu" }]}
+                        >
+                          <Input placeholder="Nhập màu" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={5}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "price"]}
+                          rules={[{ required: true, message: "Nhập giá" }]}
+                        >
+                          <InputNumber
+                            placeholder="Nhập giá"
+                            style={{ width: "100%" }}
+                            min={0}
+                            formatter={(v) =>
+                              `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                            }
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "countInStock"]}
+                          rules={[{ required: true, message: "Nhập tồn kho" }]}
+                        >
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            min={0}
+                            placeholder="Tồn kho"
+                            onChange={(value) => {
+                              const original = originalStocks[index] || 0;
+                              setStockChanges((prev) => ({
+                                ...prev,
+                                [index]: original !== value,
+                              }));
 
+                              // Init note nếu chưa có
+                              if (hasId && !variantNote) {
+                                form.setFieldValue(
+                                  ["variants", index, "note"],
+                                  ""
+                                );
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col
+                        span={2}
+                        style={{ display: "flex", gap: 8, marginTop: -25 }}
+                      >
+                        {/* ✅ Chỉ hiển thị button nếu là existing variant và stock changed */}
+                        {stockChanges[index] && (
+                          <Tooltip
+                            title={
+                              variantNote
+                                ? variantNote
+                                : "Thêm ghi chú cho phiên bản (liên quan đến tồn kho)"
+                            }
+                          >
+                            <Button
+                              type={variantNote ? "primary" : "default"}
+                              shape="circle"
+                              icon={<FileTextOutlined />}
+                              onClick={() => handleOpenNote(index)}
+                            />
+                          </Tooltip>
+                        )}
+                        {/* 🟥 Chỉ cho phép xóa nếu chưa có _id */}
+                        {!hasId && (
+                          <MinusCircleOutlined
+                            onClick={() => remove(name)}
+                            style={{ fontSize: 20, color: "red" }}
+                          />
+                        )}
+                      </Col>
+                    </Row>
+                  );
+                })}
                 <Form.Item>
                   <Button
                     type="dashed"
@@ -643,7 +699,6 @@ const ProductManagement = () => {
               </>
             )}
           </Form.List>
-
           <Form.Item
             name="image"
             label="Ảnh chính"
@@ -663,7 +718,6 @@ const ProductManagement = () => {
               )}
             </Upload>
           </Form.Item>
-
           <Form.Item
             name="images"
             label="Ảnh phụ (tối đa 3 ảnh)"
@@ -686,8 +740,38 @@ const ProductManagement = () => {
           </Form.Item>
         </Form>
       </Modal>
+      <Modal
+        open={noteModal.visible}
+        title={
+          noteModal.visible && noteModal.index !== null
+            ? (() => {
+                const variant = form.getFieldValue([
+                  "variants",
+                  noteModal.index,
+                ]);
+                const size = variant?.size || "Chưa chọn size";
+                const color = variant?.color || "Chưa nhập màu";
+                const stock = variant?.countInStock || 0;
+                return `Ghi chú cho phiên bản: ${size} - ${color} (tồn kho: ${stock})`;
+              })()
+            : "Ghi chú phiên bản"
+        }
+        onCancel={() => {
+          setNoteModal({ visible: false, index: null });
+          setCurrentNote("");
+        }}
+        onOk={() => {
+          handleSaveNote(currentNote, noteModal.index);
+        }}
+      >
+        <TextArea
+          rows={4}
+          value={currentNote} // ✅ Controlled value từ local state
+          onChange={(e) => setCurrentNote(e.target.value)} // ✅ Update local state
+          placeholder="Nhập ghi chú cho phiên bản này (ví dụ: lý do chỉnh sửa tồn kho)..."
+        />
+      </Modal>
     </div>
   );
 };
-
 export default ProductManagement;

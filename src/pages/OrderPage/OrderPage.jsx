@@ -217,8 +217,21 @@ const OrderPage = () => {
         }
         
         // Clear các item đã mua trước khi redirect
-        const remainingCart = cart.filter((item) => !item.selected);
-        localStorage.setItem("cart", JSON.stringify(remainingCart));
+        // const remainingCart = cart.filter((item) => !item.selected);
+        // localStorage.setItem("cart", JSON.stringify(remainingCart));
+
+const remainingCart = cart.filter(
+  (item) =>
+    !selectedItems.some(
+      (selected) =>
+        selected.id === item.id &&
+        (selected.selectedVariant?._id || null) === (item.selectedVariant?._id || null)
+    )
+);
+
+localStorage.setItem("cart", JSON.stringify(remainingCart));
+
+
         window.dispatchEvent(new Event("cartUpdated"));
         window.dispatchEvent(new Event("notificationsUpdated"));
 
@@ -597,7 +610,7 @@ const OrderPage = () => {
               </SummaryRow>
               <SummaryRow>
                 <span>Phí vận chuyển:</span>
-                <span>3000₫{shippingPrice.toLocaleString()}</span>
+                <span>₫{shippingPrice.toLocaleString()}</span>
               </SummaryRow>
               <TotalRow>
                 <span>Tổng cộng:</span>

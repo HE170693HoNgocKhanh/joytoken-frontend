@@ -66,7 +66,11 @@ const DrawerCart = ({ open, onClose, title = "Giỏ hàng của bạn" }) => {
           <strong>Tổng cộng: ₫{total.toLocaleString()}</strong>
           <Button
             type="primary"
-            onClick={() => navigate("/cart")}>        
+            onClick={() => {
+              onClose();
+              navigate("/cart");
+            }}
+          >
             Đi đến giỏ hàng
           </Button>
         </div>
