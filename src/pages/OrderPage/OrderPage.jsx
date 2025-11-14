@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../../services/orderService";
-import { message } from "antd";
+import { message, Select } from "antd";
 import {
   UserOutlined,
   HomeOutlined,
@@ -36,6 +36,72 @@ import {
   EmptyStateContainer,
 } from "./style";
 
+const provinces = [
+  "An Giang",
+  "Bà Rịa-Vũng Tàu",
+  "Bắc Giang",
+  "Bắc Kạn",
+  "Bạc Liêu",
+  "Bắc Ninh",
+  "Bến Tre",
+  "Bình Định",
+  "Bình Dương",
+  "Bình Phước",
+  "Bình Thuận",
+  "Cà Mau",
+  "Cần Thơ",
+  "Cao Bằng",
+  "Đà Nẵng",
+  "Đắk Lắk",
+  "Đắk Nông",
+  "Điện Biên",
+  "Đồng Nai",
+  "Đồng Tháp",
+  "Gia Lai",
+  "Hà Giang",
+  "Hà Nam",
+  "Hà Nội",
+  "Hà Tĩnh",
+  "Hải Dương",
+  "Hải Phòng",
+  "Hậu Giang",
+  "TP. Hồ Chí Minh",
+  "Hòa Bình",
+  "Hưng Yên",
+  "Khánh Hòa",
+  "Kiên Giang",
+  "Kon Tum",
+  "Lai Châu",
+  "Lâm Đồng",
+  "Lạng Sơn",
+  "Lào Cai",
+  "Long An",
+  "Nam Định",
+  "Nghệ An",
+  "Ninh Bình",
+  "Ninh Thuận",
+  "Phú Thọ",
+  "Phú Yên",
+  "Quảng Bình",
+  "Quảng Nam",
+  "Quảng Ngãi",
+  "Quảng Ninh",
+  "Quảng Trị",
+  "Sóc Trăng",
+  "Sơn La",
+  "Tây Ninh",
+  "Thái Bình",
+  "Thái Nguyên",
+  "Thanh Hóa",
+  "Thừa Thiên - Huế",
+  "Tiền Giang",
+  "Trà Vinh",
+  "Tuyên Quang",
+  "Vĩnh Long",
+  "Vĩnh Phúc",
+  "Yên Bái"
+];
+
 const OrderPage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
@@ -47,12 +113,14 @@ const OrderPage = () => {
     email: "",
     phone: "",
     address: "",
-    city: "",
+    city: "Hà Nội",
     district: "",
     ward: "",
     country: "Vietnam",
     postalCode: "700000",
   });
+
+  const [phoneError, setPhoneError] = useState("");
 
   // ⚙️ Default payment method → PAYOS cho đúng enum backend
   const [paymentMethod, setPaymentMethod] = useState("PayOS");
@@ -109,6 +177,15 @@ const OrderPage = () => {
       ...prev,
       [field]: value,
     }));
+
+    if (field === "phone") {
+      const phoneRegex = /^0(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+      if (value && !phoneRegex.test(value)) {
+        setPhoneError("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam (10 chữ số)");
+      } else {
+        setPhoneError("");
+      }
+    }
   };
 
   //  Update số lượng sản phẩm
@@ -143,6 +220,15 @@ const OrderPage = () => {
       message.error("Vui lòng điền đầy đủ thông tin giao hàng");
       return;
     }
+
+    // Validate số điện thoại Việt Nam (10 chữ số, bắt đầu bằng 0 và theo pattern mobile)
+    const phoneRegex = /^0(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!phoneRegex.test(shippingAddress.phone)) {
+      setPhoneError("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam (10 chữ số)");
+      message.error("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại di động Việt Nam (10 chữ số)");
+      return;
+    }
+
     //  Kiểm tra giỏ hàng
     if (selectedItems.length === 0) {
       message.error("Giỏ hàng trống");
@@ -295,6 +381,11 @@ localStorage.setItem("cart", JSON.stringify(remainingCart));
     );
   }
 
+  const provinceOptions = provinces.map((province) => ({
+    value: province,
+    label: province,
+  }));
+
   return (
     <Container>
       <div style={{ marginBottom: "2rem" }}>
@@ -338,13 +429,17 @@ localStorage.setItem("cart", JSON.stringify(remainingCart));
                 </FormGroup>
 
                 <FormGroup>
-                  <label>Số điện thoại *</label>
+                  <label style={{ color: phoneError ? 'red' : 'inherit' }}>Số điện thoại *</label>
                   <Input
                     type="tel"
                     value={shippingAddress.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     required
+                    pattern="^0(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$"
+                    title="Số điện thoại phải là số di động Việt Nam hợp lệ (10 chữ số)"
+                    style={{ border: phoneError ? '1px solid red' : undefined }}
                   />
+                  {phoneError && <span style={{ color: 'red', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>{phoneError}</span>}
                 </FormGroup>
 
                 <FormGroup style={{ gridColumn: "1 / -1" }}>
@@ -380,10 +475,12 @@ localStorage.setItem("cart", JSON.stringify(remainingCart));
               <FormGrid>
                 <FormGroup>
                   <label>Tỉnh/Thành phố *</label>
-                  <Input
-                    type="text"
+                  <Select
                     value={shippingAddress.city}
-                    onChange={(e) => handleInputChange("city", e.target.value)}
+                    onChange={(value) => handleInputChange("city", value)}
+                    options={provinceOptions}
+                    placeholder="Chọn tỉnh/thành phố"
+                    style={{ width: "100%", height: "45px", borderRadius: "20px" }}
                     required
                   />
                 </FormGroup>
