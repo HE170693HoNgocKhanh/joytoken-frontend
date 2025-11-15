@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authService } from '../../services';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { authService } from "../../services";
 import {
   Container,
   LeftSection,
@@ -34,16 +34,21 @@ import {
   LinkText,
   PasswordRequirements,
   RequirementItem,
-} from './style';
+} from "./style";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [step, setStep] = useState('form');
-  const [otp, setOtp] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState("");
+  const [step, setStep] = useState("form");
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState({
     minLength: false,
@@ -62,55 +67,62 @@ const RegisterPage = () => {
       hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     };
     setPasswordErrors(errors);
-    return Object.values(errors).every(v => v === true);
+    return Object.values(errors).every((v) => v === true);
   };
 
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    setError('');
-    
-    if (name === 'password') {
+    setError("");
+
+    if (name === "password") {
       validatePassword(value);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     if (!form.name || !form.email || !form.password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+      setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
     if (!validatePassword(form.password)) {
-      setError('Mật khẩu chưa đáp ứng yêu cầu. Vui lòng kiểm tra các điều kiện bên dưới.');
+      setError(
+        "Mật khẩu chưa đáp ứng yêu cầu. Vui lòng kiểm tra các điều kiện bên dưới."
+      );
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setError('Mật khẩu nhập lại không khớp');
+      setError("Mật khẩu nhập lại không khớp");
       return;
     }
 
     if (!agreeTerms) {
-      setError('Vui lòng đồng ý với điều khoản dịch vụ');
+      setError("Vui lòng đồng ý với điều khoản dịch vụ");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await authService.register({ 
-        name: form.name, 
-        email: form.email, 
-        password: form.password 
+      const res = await authService.register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
       });
-      setMessage(res?.message || 'Đăng ký thành công, vui lòng kiểm tra email để lấy mã OTP');
-      setStep('otp');
+      setMessage(
+        res?.message ||
+          "Đăng ký thành công, vui lòng kiểm tra email để lấy mã OTP"
+      );
+      setStep("otp");
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Đăng ký thất bại');
+      setError(
+        err?.response?.data?.message || err?.message || "Đăng ký thất bại"
+      );
     } finally {
       setLoading(false);
     }
@@ -118,23 +130,25 @@ const RegisterPage = () => {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     if (!otp || otp.length !== 6) {
-      setError('Vui lòng nhập mã OTP 6 chữ số');
+      setError("Vui lòng nhập mã OTP 6 chữ số");
       return;
     }
 
     try {
       setLoading(true);
       const res = await authService.verifyRegisterEmail(form.email, otp);
-      setMessage(res?.message || 'Xác thực thành công! Hãy đăng nhập.');
+      setMessage(res?.message || "Xác thực thành công! Hãy đăng nhập.");
       setTimeout(() => {
-        navigate('/login');
+        navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Xác thực thất bại');
+      setError(
+        err?.response?.data?.message || err?.message || "Xác thực thất bại"
+      );
     } finally {
       setLoading(false);
     }
@@ -143,18 +157,32 @@ const RegisterPage = () => {
   return (
     <Container>
       <LeftSection>
-        <Moon />
+        {/* <Moon />
         <TreeBranch />
         <Bird top="18%" left="46%" />
         <Bird top="19%" left="52%" rotate="-45deg" />
         <Hills />
         <Trees />
-        
+         */}
+      <img
+        src="../public/images/banner.jpg"
+        alt="Banner"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          // position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 0,
+          cursor: 'pointer', 
+        }}
+        onClick={() => navigate('/')}
+      />
         <WelcomeContent>
-          <WelcomeTitle>Welcome Page</WelcomeTitle>
+          <WelcomeTitle>Welcome To JoyToken</WelcomeTitle>
           <WelcomeText>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-            Donec pharetra lacinia maximus. Integer pulvinar lacus.
+           Nhanh tay trở thành thành viên của Joy để mua sắm nào
           </WelcomeText>
         </WelcomeContent>
 
@@ -162,15 +190,20 @@ const RegisterPage = () => {
           <SocialTitle>GET CONNECTED WITH</SocialTitle>
           <SocialIcons>
             <SocialIcon bg="#1da1f2" href="#" title="Twitter">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
               </svg>
             </SocialIcon>
             <SocialIcon bg="#dd4b39" href="#" title="Google+">
-              <span style={{ fontSize: '18px', fontWeight: 'bold' }}>G+</span>
+              <span style={{ fontSize: "18px", fontWeight: "bold" }}>G+</span>
             </SocialIcon>
             <SocialIcon bg="#3b5998" href="#" title="Facebook">
-              <span style={{ fontSize: '18px', fontWeight: 'bold' }}>f</span>
+              <span style={{ fontSize: "18px", fontWeight: "bold" }}>f</span>
             </SocialIcon>
           </SocialIcons>
         </SocialSection>
@@ -179,7 +212,7 @@ const RegisterPage = () => {
       <RightSection>
         <FormContainer>
           <TabContainer>
-            <Tab onClick={() => navigate('/login')}>Sign In</Tab>
+            <Tab onClick={() => navigate("/login")}>Sign In</Tab>
             <Tab $active>Register</Tab>
           </TabContainer>
 
@@ -188,7 +221,7 @@ const RegisterPage = () => {
           {error && <ErrorText>{error}</ErrorText>}
           {message && <SuccessText>{message}</SuccessText>}
 
-          {step === 'form' ? (
+          {step === "form" ? (
             <Form onSubmit={handleSubmit}>
               <FormGroup>
                 <Label>FULL NAME</Label>
@@ -267,13 +300,15 @@ const RegisterPage = () => {
                   onChange={(e) => setAgreeTerms(e.target.checked)}
                 />
                 <CheckboxLabel htmlFor="terms">
-                  I agree All the Statements in{' '}
-                  <a href="#" onClick={(e) => e.preventDefault()}>Terms of service</a>
+                  I agree All the Statements in{" "}
+                  <a href="#" onClick={(e) => e.preventDefault()}>
+                    Terms of service
+                  </a>
                 </CheckboxLabel>
               </CheckboxContainer>
 
               <SubmitButton type="submit" disabled={loading}>
-                {loading ? 'Đang xử lý...' : 'Sign Up'}
+                {loading ? "Đang xử lý..." : "Sign Up"}
               </SubmitButton>
             </Form>
           ) : (
@@ -284,28 +319,33 @@ const RegisterPage = () => {
                   type="text"
                   value={otp}
                   onChange={(e) => {
-                    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                    setError('');
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                    setError("");
                   }}
                   placeholder="Enter 6-digit OTP"
                   maxLength={6}
                   required
                 />
-                <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+                <p
+                  style={{ fontSize: "12px", color: "#999", marginTop: "5px" }}
+                >
                   Mã OTP đã được gửi tới {form.email}
                 </p>
               </FormGroup>
 
               <SubmitButton type="submit" disabled={loading}>
-                {loading ? 'Đang xác thực...' : 'Verify OTP'}
+                {loading ? "Đang xác thực..." : "Verify OTP"}
               </SubmitButton>
 
               <LinkText>
-                <a href="#" onClick={(e) => {
-                  e.preventDefault();
-                  setStep('form');
-                  setOtp('');
-                }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setStep("form");
+                    setOtp("");
+                  }}
+                >
                   Quay lại đăng ký
                 </a>
               </LinkText>
@@ -322,4 +362,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

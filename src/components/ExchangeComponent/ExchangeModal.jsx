@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
   Form,
@@ -18,8 +18,14 @@ import {
   Empty,
   Spin,
   Steps,
+  Row,
+  Col,
+  Pagination,
 } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import { exchangeService, productService, orderService } from "../../services";
+
+const { Option } = Select;
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -34,17 +40,33 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
   const [products, setProducts] = useState([]);
   const [selectedReturnItems, setSelectedReturnItems] = useState([]);
   const [selectedExchangeItems, setSelectedExchangeItems] = useState([]);
+  
+  // ✅ State cho filter và search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest"
+  
+  // ✅ State để lưu danh sách exchanges đang pending/approved
+  const [pendingExchanges, setPendingExchanges] = useState([]);
+  
+  // ✅ State cho pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5); // Hiển thị 5 đơn hàng mỗi trang
 
   useEffect(() => {
     if (visible) {
       fetchDeliveredOrders();
       fetchProducts();
+      fetchPendingExchanges(); // ✅ Load danh sách exchanges đang pending
     } else {
       // Reset khi đóng modal
       setStep(0);
       setSelectedOrder(null);
       setSelectedReturnItems([]);
       setSelectedExchangeItems([]);
+      setSearchQuery("");
+      setSortBy("newest");
+      setPendingExchanges([]);
+      setCurrentPage(1); // Reset về trang 1 khi đóng modal
       form.resetFields();
     }
   }, [visible]);
@@ -118,6 +140,26 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
       setProducts(productsData);
     } catch (error) {
       console.error("Error fetching products:", error);
+    }
+  };
+
+  // ✅ Fetch danh sách exchanges đang pending/approved để filter orders
+  const fetchPendingExchanges = async () => {
+    try {
+      const response = await exchangeService.getMyExchanges();
+      const exchangesData = response?.data || (Array.isArray(response) ? response : []);
+      
+      // Lọc các exchange đang pending hoặc approved (chưa completed/cancelled)
+      const pending = exchangesData.filter(
+        (exchange) => 
+          exchange.status === "Pending" || 
+          exchange.status === "Approved"
+      );
+      
+      setPendingExchanges(pending);
+    } catch (error) {
+      console.error("Error fetching pending exchanges:", error);
+      setPendingExchanges([]);
     }
   };
 
@@ -331,6 +373,65 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
     }
   };
 
+  // ✅ Filter và sort orders
+  const filteredAndSortedOrders = useMemo(() => {
+    let filtered = [...orders];
+
+    // ✅ Filter ra các đơn hàng đã có exchange đang pending/approved
+    const orderIdsWithPendingExchange = new Set(
+      pendingExchanges.map((ex) => ex.originalOrderId?._id?.toString() || ex.originalOrderId?.toString())
+    );
+    
+    filtered = filtered.filter((order) => {
+      const orderId = order._id?.toString();
+      return !orderIdsWithPendingExchange.has(orderId);
+    });
+
+    // Filter theo tên sản phẩm hoặc mã đơn hàng
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((order) => {
+        // Tìm kiếm theo mã đơn hàng
+        const orderId = (order._id?.toString() || "").toLowerCase();
+        if (orderId.includes(query)) {
+          return true;
+        }
+        
+        // Tìm kiếm trong tên sản phẩm của các items trong đơn hàng
+        return order.items?.some((item) => {
+          const itemName = (item.name || item.productId?.name || "").toLowerCase();
+          return itemName.includes(query);
+        });
+      });
+    }
+
+    // Sort theo ngày
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.deliveredAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.deliveredAt || b.createdAt || 0).getTime();
+      
+      if (sortBy === "newest") {
+        return dateB - dateA; // Mới nhất trước
+      } else {
+        return dateA - dateB; // Cũ nhất trước
+      }
+    });
+
+    return filtered;
+  }, [orders, searchQuery, sortBy, pendingExchanges]);
+
+  // ✅ Tính toán pagination
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredAndSortedOrders.slice(startIndex, endIndex);
+  }, [filteredAndSortedOrders, currentPage, pageSize]);
+
+  // ✅ Reset về trang 1 khi filter/search thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy]);
+
   const selectedProductId = Form.useWatch("exchangeProductId", form);
   const selectedVariantId = Form.useWatch("exchangeVariantId", form);
   const selectedProduct = products.find((p) => p._id === selectedProductId);
@@ -365,6 +466,48 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
       {step === 0 && (
         <div>
           <Title level={4}>Chọn đơn hàng muốn đổi</Title>
+          
+          {/* ✅ Filter và Search */}
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col flex="auto">
+              <Input
+                placeholder="Tìm kiếm theo mã đơn hàng hoặc tên sản phẩm..."
+                prefix={<SearchOutlined />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                allowClear
+                size="large"
+              />
+            </Col>
+            <Col>
+              <Select
+                value={sortBy}
+                onChange={setSortBy}
+                size="large"
+                style={{ width: 180 }}
+              >
+                <Select.Option value="newest">Mới nhất</Select.Option>
+                <Select.Option value="oldest">Cũ nhất</Select.Option>
+              </Select>
+            </Col>
+          </Row>
+
+          {/* ✅ Hiển thị số lượng kết quả */}
+          {!loading && orders.length > 0 && (
+            <div style={{ marginBottom: 12, fontSize: 14, color: "#666" }}>
+              {filteredAndSortedOrders.length === 0 ? (
+                <Text type="secondary">
+                  Không tìm thấy đơn hàng nào phù hợp với "{searchQuery}"
+                </Text>
+              ) : (
+                <Text>
+                  Hiển thị {filteredAndSortedOrders.length} / {orders.length} đơn hàng
+                  {searchQuery && ` cho "${searchQuery}"`}
+                </Text>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px" }}>
               <Spin tip="Đang tải danh sách đơn hàng..." />
@@ -381,34 +524,68 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
               }
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
+          ) : filteredAndSortedOrders.length === 0 ? (
+            <Empty 
+              description={
+                <div>
+                  <div style={{ marginBottom: 8 }}>Không tìm thấy đơn hàng nào</div>
+                  <div style={{ fontSize: 12, color: "#999" }}>
+                    Thử thay đổi từ khóa tìm kiếm hoặc xóa bộ lọc
+                  </div>
+                </div>
+              }
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           ) : (
+            <>
             <List
-              dataSource={orders}
-              renderItem={(order) => (
-                <List.Item
-                  style={{
-                    padding: "16px",
-                    border: "1px solid #e8e8e8",
-                    borderRadius: 8,
-                    marginBottom: 12,
-                    cursor: "pointer",
-                    transition: "all 0.3s",
-                  }}
-                  onClick={() => handleOrderSelect(order)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#1890ff";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(24,144,255,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#e8e8e8";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  <div style={{ width: "100%" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <Text strong>Mã đơn: #{order._id?.slice(-6) || order._id}</Text>
-                      <Tag color="green">Đã giao</Tag>
-                    </div>
+              dataSource={paginatedOrders}
+              renderItem={(order) => {
+                // ✅ Kiểm tra xem đơn hàng này có exchange đang pending không
+                const hasPendingExchange = pendingExchanges.some(
+                  (ex) => (ex.originalOrderId?._id?.toString() || ex.originalOrderId?.toString()) === order._id?.toString()
+                );
+                
+                return (
+                  <List.Item
+                    style={{
+                      padding: "16px",
+                      border: "1px solid #e8e8e8",
+                      borderRadius: 8,
+                      marginBottom: 12,
+                      cursor: hasPendingExchange ? "not-allowed" : "pointer",
+                      transition: "all 0.3s",
+                      opacity: hasPendingExchange ? 0.6 : 1,
+                      background: hasPendingExchange ? "#f5f5f5" : "transparent",
+                    }}
+                    onClick={() => {
+                      if (hasPendingExchange) {
+                        message.warning("Đơn hàng này đang có yêu cầu đổi hàng đang xử lý. Vui lòng chờ xử lý xong.");
+                        return;
+                      }
+                      handleOrderSelect(order);
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!hasPendingExchange) {
+                        e.currentTarget.style.borderColor = "#1890ff";
+                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(24,144,255,0.2)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#e8e8e8";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    <div style={{ width: "100%" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <Text strong>Mã đơn: #{order._id?.slice(-6) || order._id}</Text>
+                        <Space>
+                          {hasPendingExchange && (
+                            <Tag color="orange">Đang xử lý đổi hàng</Tag>
+                          )}
+                          <Tag color="green">Đã giao</Tag>
+                        </Space>
+                      </div>
                     <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
                       Ngày giao: {order.deliveredAt 
                         ? new Date(order.deliveredAt).toLocaleDateString("vi-VN")
@@ -455,8 +632,33 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
                     </div>
                   </div>
                 </List.Item>
-              )}
+                );
+              }}
             />
+            {filteredAndSortedOrders.length > 0 && (
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+                <Pagination
+                  current={currentPage}
+                  total={filteredAndSortedOrders.length}
+                  pageSize={pageSize}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total, range) => 
+                    `${range[0]}-${range[1]} của ${total} đơn hàng`
+                  }
+                  pageSizeOptions={["5", "10", "20", "50"]}
+                  onChange={(page, size) => {
+                    setCurrentPage(page);
+                    setPageSize(size);
+                  }}
+                  onShowSizeChange={(current, size) => {
+                    setCurrentPage(1);
+                    setPageSize(size);
+                  }}
+                />
+              </div>
+            )}
+            </>
           )}
         </div>
       )}
@@ -713,4 +915,5 @@ const ExchangeModal = ({ visible, onCancel, onSuccess }) => {
 };
 
 export default ExchangeModal;
+
 

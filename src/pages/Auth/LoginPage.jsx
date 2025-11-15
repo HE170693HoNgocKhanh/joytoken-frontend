@@ -57,41 +57,61 @@ const LoginPage = () => {
 
       navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Đăng nhập thất bại!");
+      setError(
+        err?.response?.data?.message || err?.message || "Đăng nhập thất bại!"
+      );
     }
   };
 
   return (
     <Container>
       <LeftSection>
-        <Moon />
+        {/* <Moon />
         <TreeBranch />
         <Bird top="18%" left="46%" />
         <Bird top="19%" left="52%" rotate="-45deg" />
         <Hills />
-        <Trees />
-        
+
+<Trees /> */}
+        <img
+          src="../public/images/banner.jpg"
+          alt="Banner"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            // position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 0,
+            cursor: "pointer",
+          }}
+          onClick={() => navigate("/")}
+        />
+
         <WelcomeContent>
-          <WelcomeTitle>Welcome Page</WelcomeTitle>
-          <WelcomeText>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-            Donec pharetra lacinia maximus. Integer pulvinar lacus.
-          </WelcomeText>
+          <WelcomeTitle>Welcome To JoyToken</WelcomeTitle>
+          <WelcomeText>CÙng khám phá và tìm cho mình người bạn mới</WelcomeText>
         </WelcomeContent>
 
         <SocialSection>
           <SocialTitle>GET CONNECTED WITH</SocialTitle>
           <SocialIcons>
             <SocialIcon bg="#1da1f2" href="#" title="Twitter">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
               </svg>
             </SocialIcon>
             <SocialIcon bg="#dd4b39" href="#" title="Google+">
-              <span style={{ fontSize: '18px', fontWeight: 'bold' }}>G+</span>
+              <span style={{ fontSize: "18px", fontWeight: "bold" }}>G+</span>
             </SocialIcon>
             <SocialIcon bg="#3b5998" href="#" title="Facebook">
-              <span style={{ fontSize: '18px', fontWeight: 'bold' }}>f</span>
+              <span style={{ fontSize: "18px", fontWeight: "bold" }}>f</span>
             </SocialIcon>
           </SocialIcons>
         </SocialSection>
@@ -101,7 +121,7 @@ const LoginPage = () => {
         <FormContainer>
           <TabContainer>
             <Tab $active>Sign In</Tab>
-            <Tab onClick={() => navigate('/register')}>Register</Tab>
+            <Tab onClick={() => navigate("/register")}>Register</Tab>
           </TabContainer>
 
           <FormTitle>Sign In</FormTitle>
@@ -117,7 +137,7 @@ const LoginPage = () => {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 required
               />
@@ -132,7 +152,7 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 required
               />
@@ -153,4 +173,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

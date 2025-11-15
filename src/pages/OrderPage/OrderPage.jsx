@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../../services/orderService";
-import { message, Select } from "antd";
+import { message, Select, Spin } from "antd";
 import {
   UserOutlined,
   HomeOutlined,
@@ -10,6 +10,7 @@ import {
   BankOutlined,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
+import axios from "axios";
 import {
   Container,
   CheckoutWrapper,
@@ -36,96 +37,41 @@ import {
   EmptyStateContainer,
 } from "./style";
 
-const provinces = [
-  "An Giang",
-  "Bà Rịa-Vũng Tàu",
-  "Bắc Giang",
-  "Bắc Kạn",
-  "Bạc Liêu",
-  "Bắc Ninh",
-  "Bến Tre",
-  "Bình Định",
-  "Bình Dương",
-  "Bình Phước",
-  "Bình Thuận",
-  "Cà Mau",
-  "Cần Thơ",
-  "Cao Bằng",
-  "Đà Nẵng",
-  "Đắk Lắk",
-  "Đắk Nông",
-  "Điện Biên",
-  "Đồng Nai",
-  "Đồng Tháp",
-  "Gia Lai",
-  "Hà Giang",
-  "Hà Nam",
-  "Hà Nội",
-  "Hà Tĩnh",
-  "Hải Dương",
-  "Hải Phòng",
-  "Hậu Giang",
-  "TP. Hồ Chí Minh",
-  "Hòa Bình",
-  "Hưng Yên",
-  "Khánh Hòa",
-  "Kiên Giang",
-  "Kon Tum",
-  "Lai Châu",
-  "Lâm Đồng",
-  "Lạng Sơn",
-  "Lào Cai",
-  "Long An",
-  "Nam Định",
-  "Nghệ An",
-  "Ninh Bình",
-  "Ninh Thuận",
-  "Phú Thọ",
-  "Phú Yên",
-  "Quảng Bình",
-  "Quảng Nam",
-  "Quảng Ngãi",
-  "Quảng Ninh",
-  "Quảng Trị",
-  "Sóc Trăng",
-  "Sơn La",
-  "Tây Ninh",
-  "Thái Bình",
-  "Thái Nguyên",
-  "Thanh Hóa",
-  "Thừa Thiên - Huế",
-  "Tiền Giang",
-  "Trà Vinh",
-  "Tuyên Quang",
-  "Vĩnh Long",
-  "Vĩnh Phúc",
-  "Yên Bái"
-];
+// API endpoint cho địa chỉ Việt Nam
+const VIETNAM_API_BASE = "https://provinces.open-api.vn/api";
 
 const OrderPage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 🧾 Form state
+  // ✅ State cho địa chỉ Việt Nam
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+
+  //  Form state
   const [shippingAddress, setShippingAddress] = useState({
     fullName: "",
     email: "",
     phone: "",
     address: "",
-    city: "Hà Nội",
+    city: "",
     district: "",
     ward: "",
     country: "Vietnam",
-    postalCode: "700000",
+    postalCode: "",
   });
 
   const [phoneError, setPhoneError] = useState("");
 
-  // ⚙️ Default payment method → PAYOS cho đúng enum backend
+  //  Default payment method → PAYOS cho đúng enum backend
   const [paymentMethod, setPaymentMethod] = useState("PayOS");
 
-  // 💰 Tính toán giá
+  //  Tính toán giá
   const selectedItems = cart.filter((item) => item.selected);
   const itemsPrice = selectedItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
@@ -147,6 +93,99 @@ const OrderPage = () => {
   //ví dụ : user.coin = 10;(nếu xong code thì có thể làm thêm )
   //const voucher = 10* 5
   const totalPrice = itemsPrice + taxPrice + shippingPrice - discountAmount ; // - voucher 
+
+  // ✅ Load danh sách tỉnh/thành phố
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        setLoadingProvinces(true);
+        const response = await axios.get(`${VIETNAM_API_BASE}/p/`);
+        const provincesData = response.data.map((p) => ({
+          value: p.code,
+          label: p.name,
+          name: p.name,
+        }));
+        setProvinces(provincesData);
+      } catch (error) {
+        console.error("Error fetching provinces:", error);
+        message.error("Không thể tải danh sách tỉnh/thành phố");
+      } finally {
+        setLoadingProvinces(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  // ✅ Load danh sách quận/huyện khi chọn tỉnh/thành phố
+  useEffect(() => {
+    if (!shippingAddress.city) {
+      setDistricts([]);
+      setWards([]);
+      return;
+    }
+
+    const fetchDistricts = async () => {
+      try {
+        setLoadingDistricts(true);
+        const response = await axios.get(
+          `${VIETNAM_API_BASE}/p/${shippingAddress.city}?depth=2`
+        );
+        const districtsData = response.data.districts?.map((d) => ({
+          value: d.code,
+          label: d.name,
+          name: d.name,
+        })) || [];
+        setDistricts(districtsData);
+        // Reset district và ward khi đổi tỉnh/thành phố
+        setShippingAddress((prev) => ({
+          ...prev,
+          district: "",
+          ward: "",
+        }));
+        setWards([]);
+      } catch (error) {
+        console.error("Error fetching districts:", error);
+        message.error("Không thể tải danh sách quận/huyện");
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+    fetchDistricts();
+  }, [shippingAddress.city]);
+
+  // ✅ Load danh sách phường/xã khi chọn quận/huyện
+  useEffect(() => {
+    if (!shippingAddress.district) {
+      setWards([]);
+      return;
+    }
+
+    const fetchWards = async () => {
+      try {
+        setLoadingWards(true);
+        const response = await axios.get(
+          `${VIETNAM_API_BASE}/d/${shippingAddress.district}?depth=2`
+        );
+        const wardsData = response.data.wards?.map((w) => ({
+          value: w.code,
+          label: w.name,
+          name: w.name,
+        })) || [];
+        setWards(wardsData);
+        // Reset ward khi đổi quận/huyện
+        setShippingAddress((prev) => ({
+          ...prev,
+          ward: "",
+        }));
+      } catch (error) {
+        console.error("Error fetching wards:", error);
+        message.error("Không thể tải danh sách phường/xã");
+      } finally {
+        setLoadingWards(false);
+      }
+    };
+    fetchWards();
+  }, [shippingAddress.district]);
 
   //  Load cart
   useEffect(() => {
@@ -188,6 +227,24 @@ const OrderPage = () => {
     }
   };
 
+  // ✅ Lấy tên tỉnh/thành phố từ code
+  const getProvinceName = (code) => {
+    const province = provinces.find((p) => p.value === code);
+    return province?.name || code;
+  };
+
+  // ✅ Lấy tên quận/huyện từ code
+  const getDistrictName = (code) => {
+    const district = districts.find((d) => d.value === code);
+    return district?.name || code;
+  };
+
+  // ✅ Lấy tên phường/xã từ code
+  const getWardName = (code) => {
+    const ward = wards.find((w) => w.value === code);
+    return ward?.name || code;
+  };
+
   //  Update số lượng sản phẩm
   const updateQuantity = (itemId, variantId, newQuantity) => {
     const maxStock =
@@ -215,11 +272,22 @@ const OrderPage = () => {
     if (
       !shippingAddress.fullName ||
       !shippingAddress.phone ||
-      !shippingAddress.address
+      !shippingAddress.address ||
+      !shippingAddress.city ||
+      !shippingAddress.district ||
+      !shippingAddress.ward
     ) {
       message.error("Vui lòng điền đầy đủ thông tin giao hàng");
       return;
     }
+
+    // ✅ Chuẩn hóa địa chỉ với tên đầy đủ
+    const normalizedShippingAddress = {
+      ...shippingAddress,
+      city: getProvinceName(shippingAddress.city),
+      district: getDistrictName(shippingAddress.district),
+      ward: getWardName(shippingAddress.ward),
+    };
 
     // Validate số điện thoại Việt Nam (10 chữ số, bắt đầu bằng 0 và theo pattern mobile)
     const phoneRegex = /^0(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
@@ -261,7 +329,7 @@ const OrderPage = () => {
 
       const result = await orderService.createOrder({
         items,
-        shippingAddress,
+        shippingAddress: normalizedShippingAddress,
         paymentMethod,
         itemsPrice,
         taxPrice,
@@ -286,7 +354,7 @@ const OrderPage = () => {
         // Với PayOS: result.data._id là pendingOrder._id, chưa phải Order thực sự
         const pendingOrderId = result.data._id;
         
-        // ✅ Lưu token và user vào sessionStorage trước khi redirect đến PayOS
+        //  Lưu token và user vào sessionStorage trước khi redirect đến PayOS
         // Điều này đảm bảo token không bị mất khi redirect về từ PayOS
         const accessToken = localStorage.getItem('accessToken');
         const refreshToken = localStorage.getItem('refreshToken');
@@ -381,10 +449,6 @@ localStorage.setItem("cart", JSON.stringify(remainingCart));
     );
   }
 
-  const provinceOptions = provinces.map((province) => ({
-    value: province,
-    label: province,
-  }));
 
   return (
     <Container>
@@ -478,49 +542,69 @@ localStorage.setItem("cart", JSON.stringify(remainingCart));
                   <Select
                     value={shippingAddress.city}
                     onChange={(value) => handleInputChange("city", value)}
-                    options={provinceOptions}
+                    options={provinces}
                     placeholder="Chọn tỉnh/thành phố"
-                    style={{ width: "100%", height: "45px", borderRadius: "20px" }}
+                    style={{ width: "100%", height: "45px" }}
+                    loading={loadingProvinces}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={loadingProvinces ? <Spin size="small" /> : "Không tìm thấy"}
                     required
                   />
                 </FormGroup>
 
                 <FormGroup>
                   <label>Quận/Huyện *</label>
-                  <Input
-                    type="text"
+                  <Select
                     value={shippingAddress.district}
-                    onChange={(e) =>
-                      handleInputChange("district", e.target.value)
+                    onChange={(value) => handleInputChange("district", value)}
+                    options={districts}
+                    placeholder="Chọn quận/huyện"
+                    style={{ width: "100%", height: "45px" }}
+                    loading={loadingDistricts}
+                    disabled={!shippingAddress.city}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                     }
+                    notFoundContent={loadingDistricts ? <Spin size="small" /> : "Không tìm thấy"}
                     required
                   />
                 </FormGroup>
 
                 <FormGroup>
                   <label>Phường/Xã *</label>
-                  <Input
-                    type="text"
+                  <Select
                     value={shippingAddress.ward}
-                    onChange={(e) => handleInputChange("ward", e.target.value)}
+                    onChange={(value) => handleInputChange("ward", value)}
+                    options={wards}
+                    placeholder="Chọn phường/xã"
+                    style={{ width: "100%", height: "45px" }}
+                    loading={loadingWards}
+                    disabled={!shippingAddress.district}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={loadingWards ? <Spin size="small" /> : "Không tìm thấy"}
                     required
                   />
                 </FormGroup>
 
-                 <FormGroup>
+                <FormGroup>
                   <label>Quốc gia *</label>
                   <Input
                     type="text"
                     value={shippingAddress.country}
-                    onChange={(e) =>
-                      handleInputChange("country", e.target.value)
-                    }
-                    required
+                    readOnly
+                    style={{ backgroundColor: "#f5f5f5", cursor: "not-allowed" }}
                   />
                 </FormGroup>
               </FormGrid>
 
-              {/* ➕ Thêm country và postalCode */}
+              {/*  Thêm country và postalCode */}
               {/* <FormGrid>
                 <FormGroup>
                   <label>Mã bưu điện *</label>

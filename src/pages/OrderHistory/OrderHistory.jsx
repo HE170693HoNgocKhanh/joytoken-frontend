@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   Card,
@@ -18,7 +18,9 @@ import {
   Spin,
   message,
   Empty,
+  Select,
 } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -27,7 +29,8 @@ import { orderService } from "../../services";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const OrderHistory = () => {
   const [searchText, setSearchText] = useState("");
@@ -35,17 +38,18 @@ const OrderHistory = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  // ✅ State cho sort option
+  const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest"
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setIsLoading(true);
         const response = await orderService.getUserOrders();
-        // apiClient interceptor đã trả về response.data, nên response là { success: true, data: [...] }
+       
         if (response && response.success && response.data) {
           setOrdersData(response.data);
         } else if (Array.isArray(response)) {
-          // Nếu response là array trực tiếp
           setOrdersData(response);
         } else {
           console.error("Unexpected response format:", response);
@@ -74,15 +78,39 @@ const OrderHistory = () => {
     0
   ) || 0;
 
-  const filteredOrders = (ordersData || []).filter(
-    (order) =>
-      order.items?.some((item) =>
-        item.name?.toLowerCase().includes(searchText.toLowerCase())
-      ) ||
-      order.shippingAddress?.fullName
-        ?.toLowerCase()
-        .includes(searchText.toLowerCase())
-  );
+  // ✅ Filter và sort orders với useMemo
+  const filteredAndSortedOrders = useMemo(() => {
+    let filtered = [...(ordersData || [])];
+
+    // Filter theo tên sản phẩm hoặc người nhận
+    if (searchText.trim()) {
+      const query = searchText.toLowerCase().trim();
+      filtered = filtered.filter(
+        (order) =>
+          order.items?.some((item) =>
+            (item.name || item.productId?.name || "").toLowerCase().includes(query)
+          ) ||
+          order.shippingAddress?.fullName
+            ?.toLowerCase()
+            .includes(query) ||
+          order._id?.toLowerCase().includes(query) // Tìm theo mã đơn
+      );
+    }
+
+    // Sort theo ngày
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      
+      if (sortBy === "newest") {
+        return dateB - dateA; // Mới nhất trước
+      } else {
+        return dateA - dateB; // Cũ nhất trước
+      }
+    });
+
+    return filtered;
+  }, [ordersData, searchText, sortBy]);
 
   if (isLoading) {
     return (
@@ -328,6 +356,31 @@ const OrderHistory = () => {
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
       defaultSortOrder: "descend",
     },
+    {
+      title: "Ngày nhận hàng",
+      dataIndex: "deliveredAt",
+      key: "deliveredAt",
+      width: 150,
+      render: (date, record) => {
+        if (date && record.isDelivered) {
+          return (
+            <div>
+              <div style={{ color: "#52c41a", fontWeight: 500 }}>
+                {dayjs(date).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div style={{ color: "#999", fontStyle: "italic" }}>Chưa giao</div>
+        );
+      },
+      sorter: (a, b) => {
+        const dateA = a.deliveredAt ? new Date(a.deliveredAt).getTime() : 0;
+        const dateB = b.deliveredAt ? new Date(b.deliveredAt).getTime() : 0;
+        return dateA - dateB;
+      },
+    },
   ];
 
   const handleOrderClick = (record) => {
@@ -353,6 +406,17 @@ const OrderHistory = () => {
           {dayjs(order.updatedAt)
             .tz("Asia/Ho_Chi_Minh")
             .format("DD/MM/YYYY HH:mm:ss")}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày nhận hàng">
+          {order.deliveredAt && order.isDelivered ? (
+            <Tag color="green">
+              {dayjs(order.deliveredAt)
+                .tz("Asia/Ho_Chi_Minh")
+                .format("DD/MM/YYYY HH:mm:ss")}
+            </Tag>
+          ) : (
+            <Tag color="default">Chưa giao hàng</Tag>
+          )}
         </Descriptions.Item>
         <Descriptions.Item label="Người nhận">
           {order.shippingAddress.fullName} - {order.shippingAddress.phone}
@@ -524,35 +588,58 @@ const OrderHistory = () => {
         style={{ borderRadius: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
         bodyStyle={{ padding: "24px" }}
       >
-        <div
-          style={{
-            marginBottom: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Space>
-            <Input.Search
-              placeholder="Tìm kiếm theo tên sản phẩm hoặc người nhận"
+        {/* ✅ Filter và Search */}
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col flex="auto">
+            <Input
+              placeholder="Tìm kiếm theo tên sản phẩm, người nhận hoặc mã đơn..."
+              prefix={<SearchOutlined />}
               allowClear
-              style={{ width: 300 }}
+              size="large"
+              value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-          </Space>
-          <div style={{ fontSize: 14, color: "#666" }}>
-            Hiển thị {filteredOrders.length} / {totalOrders} đơn hàng
-          </div>
+          </Col>
+          <Col>
+            <Select
+              value={sortBy}
+              onChange={setSortBy}
+              size="large"
+              style={{ width: 180 }}
+            >
+              <Option value="newest">Mới nhất</Option>
+              <Option value="oldest">Cũ nhất</Option>
+            </Select>
+          </Col>
+        </Row>
+
+        {/* ✅ Hiển thị số lượng kết quả */}
+        <div style={{ marginBottom: 16, fontSize: 14, color: "#666" }}>
+          {filteredAndSortedOrders.length === 0 && searchText ? (
+            <Text type="secondary">
+              Không tìm thấy đơn hàng nào phù hợp với "{searchText}"
+            </Text>
+          ) : (
+            <Text>
+              Hiển thị {filteredAndSortedOrders.length} / {totalOrders} đơn hàng
+              {searchText && ` cho "${searchText}"`}
+            </Text>
+          )}
         </div>
-        {filteredOrders.length === 0 && !isLoading ? (
+
+        {filteredAndSortedOrders.length === 0 && !isLoading ? (
           <Empty
-            description="Chưa có đơn hàng nào"
+            description={
+              searchText 
+                ? "Không tìm thấy đơn hàng nào. Thử thay đổi từ khóa tìm kiếm."
+                : "Chưa có đơn hàng nào"
+            }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         ) : (
           <Table
             columns={columns}
-            dataSource={filteredOrders}
+            dataSource={filteredAndSortedOrders}
             rowKey="_id"
             pagination={{
               pageSize: 5,

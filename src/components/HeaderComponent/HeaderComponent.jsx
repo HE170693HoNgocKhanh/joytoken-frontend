@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Input, Badge, Menu, Dropdown, Button } from "antd";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Input, Badge, Menu, Dropdown, Button, Spin, Typography, Empty } from "antd";
 import {
   ShoppingCartOutlined,
   UserOutlined,
   HeartOutlined,
   PhoneOutlined,
   SwapOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -21,10 +22,70 @@ import {
   WrapperLogo,
   WrapperSearch,
   WrapperMenu,
+  SearchDropdown,
+  SearchResultItem,
+  SearchProductCard,
+  SearchProductImage,
+  SearchProductInfo,
+  ViewAllButton,
 } from "./style";
 
 const { Search } = Input;
+const { Text } = Typography;
 const ADMIN_PANEL_ROLES = ["admin", "seller", "staff"];
+
+//  Hàm xác định sản phẩm nổi bật (đặt ngoài component để tái sử dụng)
+const selectFeaturedProducts = (products, limit = 4) => {
+  if (!products || products.length === 0) return [];
+  
+  // Sắp xếp sản phẩm theo điểm nổi bật (featured score)
+  const scoredProducts = products.map(product => {
+    let score = 0;
+    
+    // 1. Điểm từ rating (0-5 sao) - trọng số cao nhất
+    const rating = product.rating || 0;
+    score += rating * 20; // Mỗi sao = 20 điểm
+    
+    // 2. Điểm từ số lượng đánh giá (nhiều đánh giá = đáng tin cậy hơn)
+    const reviewCount = product.reviewCount || 0;
+    score += Math.min(reviewCount * 2, 30); // Tối đa 30 điểm
+    
+    // 3. Điểm từ giá (sản phẩm có giá hợp lý được ưu tiên)
+    // Giả sử giá từ 50k-500k là hợp lý
+    const price = product.price || 0;
+    if (price >= 50000 && price <= 500000) {
+      score += 10;
+    }
+    
+    // 4. Điểm từ trạng thái (sản phẩm mới được ưu tiên)
+    const daysSinceCreated = product.createdAt 
+      ? Math.floor((Date.now() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : 999;
+    if (daysSinceCreated <= 30) {
+      score += 15; // Sản phẩm mới trong 30 ngày
+    } else if (daysSinceCreated <= 90) {
+      score += 5; // Sản phẩm mới trong 90 ngày
+    }
+    
+    // 5. Điểm từ số lượng tồn kho (có sẵn = tốt hơn)
+    const stock = product.stock || 0;
+    if (stock > 0) {
+      score += 5;
+    }
+    
+    return { ...product, featuredScore: score };
+  });
+  
+  // Sắp xếp theo điểm nổi bật giảm dần
+  scoredProducts.sort((a, b) => b.featuredScore - a.featuredScore);
+  
+  // Lấy top N sản phẩm
+  return scoredProducts.slice(0, limit).map(p => {
+    // Xóa featuredScore trước khi trả về
+    const { featuredScore, ...product } = p;
+    return product;
+  });
+};
 
 const Header = () => {
   const navigate = useNavigate();
@@ -38,6 +99,15 @@ const Header = () => {
   const [openDrawerFavorite, setOpenDrawerFavorite] = useState(false);
   const [openExchangeModal, setOpenExchangeModal] = useState(false);
   const [openContactPopover, setOpenContactPopover] = useState(false);
+  
+  // Search state
+  const [searchValue, setSearchValue] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const searchContainerRef = useRef(null);
 
   const [authState, setAuthState] = useState(() => {
     const token = localStorage.getItem("accessToken");
@@ -114,12 +184,111 @@ const Header = () => {
     };
   }, []);
 
+  // Cleanup search timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // --- Search handlers ---
+  const performSearch = useCallback(async (query) => {
+    if (!query || !query.trim()) {
+      setSearchResults([]);
+      setSearchTotal(0);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      // ✅ Lấy nhiều sản phẩm hơn để có thể chọn sản phẩm nổi bật
+      // Sắp xếp theo rating để lấy sản phẩm nổi bật nhất
+      const response = await axios.get(
+        `http://localhost:8080/api/products?search=${encodeURIComponent(query.trim())}&limit=20&sort=rating`
+      );
+      
+      const allProducts = response.data.data || [];
+      const total = response.data.pagination?.total || allProducts.length;
+      
+      // ✅ Xác định sản phẩm nổi bật dựa trên nhiều tiêu chí
+      const featuredProducts = selectFeaturedProducts(allProducts, 4);
+      
+      setSearchResults(featuredProducts);
+      setSearchTotal(total);
+      setShowSearchDropdown(true);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+      setSearchTotal(0);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchValue(value);
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce search
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300);
+  };
+
+  const handleSearchFocus = () => {
+    if (searchValue.trim() && searchResults.length > 0) {
+      setShowSearchDropdown(true);
+    }
+  };
+
+  const handleSearchBlur = (e) => {
+    // Delay to allow click events on dropdown items
+    setTimeout(() => {
+      if (!searchContainerRef.current?.contains(document.activeElement)) {
+        setShowSearchDropdown(false);
+      }
+    }, 200);
+  };
+
+  const handleViewAllResults = () => {
+    if (searchValue.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchValue.trim())}`);
+      setShowSearchDropdown(false);
+    }
+  };
+
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+    setShowSearchDropdown(false);
+    setSearchValue("");
+  };
+
   // --- Handlers ---
-  const onSearch = (value) => navigate(`/products?search=${value}`);
+  const onSearch = (value) => {
+    if (value && value.trim()) {
+      navigate(`/products?search=${encodeURIComponent(value.trim())}`);
+      setShowSearchDropdown(false);
+      setSearchValue("");
+    }
+  };
+  
   const handleLoginClick = () => navigate("/login");
   const handleProfileClick = () => navigate("/profile");
   const handleHistoryClick = () => navigate("/order-history");
   const handleAdminPanelClick = () => navigate("/admin/dashboard");
+  
+  // ✅ Handler cho "Explore All" - xóa tất cả filters
+  const handleExploreAll = () => {
+    navigate("/products?clearFilters=true");
+  };
 
   const handleLogoutClick = () => {
     localStorage.removeItem("accessToken");
@@ -205,13 +374,77 @@ const Header = () => {
     <WrapperHeader>
       <WrapperTop>
         {/* Search */}
-        <WrapperSearch>
+        <WrapperSearch ref={searchContainerRef}>
           <Search
             placeholder="Search our collection..."
             allowClear
             size="large"
+            value={searchValue}
+            onChange={handleSearchChange}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
             onSearch={onSearch}
           />
+          
+          {/* Search Dropdown */}
+          {showSearchDropdown && (
+            <SearchDropdown>
+              {searchLoading ? (
+                <div style={{ padding: "20px", textAlign: "center" }}>
+                  <Spin size="small" />
+                </div>
+              ) : searchResults.length > 0 ? (
+                <>
+                  {/* Featured Products */}
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
+                    <Text strong style={{ fontSize: "14px" }}>
+                      Sản phẩm nổi bật
+                    </Text>
+                  </div>
+                  {searchResults.map((product) => (
+                    <SearchResultItem
+                      key={product._id}
+                      onClick={() => handleProductClick(product._id)}
+                    >
+                      <SearchProductCard>
+                        <SearchProductImage
+                          src={product.images?.[0] || "/images/placeholder.jpg"}
+                          alt={product.name}
+                        />
+                        <SearchProductInfo>
+                          <Text strong style={{ fontSize: "14px", display: "block", marginBottom: 4 }}>
+                            {product.name}
+                          </Text>
+                          <Text style={{ color: "#ff7b00", fontSize: "16px", fontWeight: 600 }}>
+                            {product.price?.toLocaleString("vi-VN")}₫
+                          </Text>
+                        </SearchProductInfo>
+                      </SearchProductCard>
+                    </SearchResultItem>
+                  ))}
+                  
+                  {/* View All Results */}
+                  {searchTotal > searchResults.length && (
+                    <ViewAllButton onClick={handleViewAllResults}>
+                      <Text strong>
+                        Xem tất cả {searchTotal} sản phẩm cho "{searchValue}"
+                      </Text>
+                      <RightOutlined />
+                    </ViewAllButton>
+                  )}
+                </>
+              ) : searchValue.trim() ? (
+                <div style={{ padding: "20px", textAlign: "center" }}>
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <Text type="secondary">Không tìm thấy sản phẩm nào</Text>
+                    }
+                  />
+                </div>
+              ) : null}
+            </SearchDropdown>
+          )}
         </WrapperSearch>
 
         {/* Logo */}
@@ -289,7 +522,17 @@ const Header = () => {
       <WrapperMenu
         mode="horizontal"
         items={[
-          { key: "all", label: <Link to="/products">EXPLORE ALL</Link> },
+          { 
+            key: "all", 
+            label: (
+              <span 
+                onClick={handleExploreAll}
+                style={{ cursor: "pointer" }}
+              >
+                EXPLORE ALL
+              </span>
+            )
+          },
           ...(Array.isArray(categories)
             ? categories.map((cate) => ({
                 key: cate._id,

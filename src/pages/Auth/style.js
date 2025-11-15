@@ -188,9 +188,8 @@ export const WelcomeTitle = styled.h1`
   font-size: 48px;
   font-weight: 700;
   margin-bottom: 20px;
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-
+  color: Red;
+  text-shadow: 2px 2px 4px rgba(255, 255, 255, 1);
   @media (max-width: 900px) {
     font-size: 32px;
   }
@@ -198,7 +197,8 @@ export const WelcomeTitle = styled.h1`
 
 export const WelcomeText = styled.p`
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 2px 2px 4px rgba(250, 250, 250, 1);
+  color: rgba(254, 253, 253, 0.8);
   line-height: 1.6;
   max-width: 400px;
   margin: 0 auto 30px;

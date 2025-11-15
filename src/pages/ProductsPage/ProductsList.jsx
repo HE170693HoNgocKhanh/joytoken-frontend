@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Row,
   Col,
@@ -44,20 +44,46 @@ const ProductList = () => {
   const [sortBy, setSortBy] = useState("most_popular");
   
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const categoryFromUrl = queryParams.get("category");
+  const clearFilters = queryParams.get("clearFilters");
+  const searchQuery = queryParams.get("search");
   const { addToCart } = useCart();
 
   useEffect(() => {
     fetchCategories();
-    fetchProducts();
   }, []);
 
+  // ✅ Fetch products khi category, clearFilters hoặc search thay đổi
   useEffect(() => {
-    if (categoryFromUrl) {
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFromUrl, clearFilters, searchQuery]);
+
+  // ✅ Xử lý clearFilters và search từ query param
+  useEffect(() => {
+    if (clearFilters === "true") {
+      // Xóa tất cả filters
+      setSelectedCategories([]);
+      setPriceRange([0, 1000000]);
+      setSortBy("most_popular");
+      // Xóa query param để tránh clear lại khi reload
+      const newSearchParams = new URLSearchParams(location.search);
+      newSearchParams.delete("clearFilters");
+      window.history.replaceState(
+        {},
+        "",
+        `${location.pathname}${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ""}`
+      );
+    } else if (categoryFromUrl && !clearFilters && !searchQuery) {
+      // Chỉ set category nếu không có search query
       setSelectedCategories([categoryFromUrl]);
+    } else if (searchQuery) {
+      // Nếu có search query, clear category filter để hiển thị tất cả kết quả search
+      setSelectedCategories([]);
     }
-  }, [categoryFromUrl]);
+  }, [clearFilters, categoryFromUrl, searchQuery, location]);
 
   useEffect(() => {
     applyFiltersAndSort();
@@ -78,14 +104,29 @@ const ProductList = () => {
     let res;
     try {
       setLoading(true);
-      if (!categoryFromUrl) {
-        res = await axios.get("http://localhost:8080/api/products");
-      } else {
-        res = await axios.get(
-          `http://localhost:8080/api/products?category=${categoryFromUrl}`
-        );
+      let url = "http://localhost:8080/api/products";
+      const params = new URLSearchParams();
+      
+      // ✅ Xử lý search query - ưu tiên search
+      if (searchQuery && searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+        params.append("limit", "1000"); // Lấy nhiều kết quả khi search
       }
-
+      // ✅ Xử lý category (chỉ khi không có search)
+      else if (categoryFromUrl && clearFilters !== "true") {
+        params.append("category", categoryFromUrl);
+        params.append("limit", "1000");
+      }
+      // ✅ Nếu không có search và category, fetch tất cả với limit
+      else {
+        params.append("limit", "1000");
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      res = await axios.get(url);
       setProducts(res.data.data || []);
     } catch (err) {
       setError(err.message);
@@ -97,8 +138,9 @@ const ProductList = () => {
   const applyFiltersAndSort = () => {
     let filtered = [...products];
 
-    // Filter by category
-    if (selectedCategories.length > 0) {
+    // ✅ Nếu có search query từ URL, không filter category (backend đã filter rồi)
+    // Chỉ filter category nếu không có search query
+    if (!searchQuery && selectedCategories.length > 0) {
       filtered = filtered.filter((product) =>
         selectedCategories.includes(product.category?._id || product.category)
       );
@@ -168,6 +210,27 @@ const ProductList = () => {
     <div style={{ background: "#f5f5f5", minHeight: "100vh" }}>
       {/* Header với Filter và Sort */}
       <FilterContainer>
+        {/* ✅ Hiển thị search query nếu có */}
+        {searchQuery && (
+          <div style={{ marginBottom: 16, padding: "12px 0", borderBottom: "1px solid #e8e8e8" }}>
+            <Text strong style={{ fontSize: "16px" }}>
+              Kết quả tìm kiếm cho: <span style={{ color: "#ff7b00" }}>"{searchQuery}"</span>
+            </Text>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                const newSearchParams = new URLSearchParams(location.search);
+                newSearchParams.delete("search");
+                navigate(`${location.pathname}${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ""}`);
+              }}
+              style={{ marginLeft: 12 }}
+            >
+              Xóa tìm kiếm
+            </Button>
+          </div>
+        )}
+        
         <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
           <Col>
             <Button
@@ -183,6 +246,7 @@ const ProductList = () => {
           <Col>
             <Text strong style={{ marginRight: 8 }}>
               {filteredProducts.length} sản phẩm
+              {searchQuery && ` cho "${searchQuery}"`}
             </Text>
           </Col>
           <Col>

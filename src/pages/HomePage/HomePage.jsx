@@ -10,39 +10,42 @@ import {
 } from "./style";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useWishlist } from "../../hooks/useWishlist";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [products, setProducts] = React.useState([]);
-  const [wishlist, setWishlist] = React.useState([]);
+  const { toggle, has } = useWishlist();
 
   React.useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const products = await axios.get("http://localhost:8080/api/products");
-        setProducts(products.data.data);
-      } catch (err) {
-        console.error("Error fetching products:", err);
+        // Fallback: lấy products bình thường (vì endpoint featured đã bị xóa)
+        const fallbackResponse = await axios.get("http://localhost:8080/api/products?limit=100");
+        setProducts(fallbackResponse.data.data || []);
+      } catch (fallbackErr) {
+        console.error("Error fetching products:", fallbackErr);
       }
     };
     fetchProducts();
   }, []);
 
-  const toggleWishlist = (id) => {
-    setWishlist((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const handleWishlistToggle = (e, productId) => {
+    e.stopPropagation(); 
+    toggle(productId);
   };
 
   const settings = {
-    dots: false,
+    dots: true,
     infinite: true,
-    speed: 700,
+    speed: 600,
     slidesToShow: 4,
     slidesToScroll: 1,
     autoplay: true,
-    autoplaySpeed: 3500,
+    autoplaySpeed: 2000, 
     arrows: true,
+    pauseOnHover: true,
+    cssEase: "ease-in-out",
     responsive: [
       { breakpoint: 1024, settings: { slidesToShow: 3 } },
       { breakpoint: 768, settings: { slidesToShow: 2 } },
@@ -64,38 +67,62 @@ const HomePage = () => {
 
       {/* ---------- Product Section ---------- */}
       <ProductSection>
-        <h2 className="section-title">✨ Featured Products ✨</h2>
+        <h2 className="section-title">✨ Sản Phẩm Bán Chạy ✨</h2>
         <Slider {...settings}>
           {products.map((product) => {
             const minPrice = product.variants?.length
               ? Math.min(...product.variants.map((v) => v.price))
               : product.price;
-            const isWished = wishlist.includes(product._id);
+            const isWished = has(product._id);
 
             return (
               <div key={product._id} className="product-card">
                 <div className="product-wrapper">
-                  <div className="heart-icon" onClick={() => toggleWishlist(product._id)}>
+                  <div 
+                    className="heart-icon" 
+                    onClick={(e) => handleWishlistToggle(e, product._id)}
+                  >
                     <Heart
                       size={22}
                       color={isWished ? "#ff4d4f" : "#999"}
                       fill={isWished ? "#ff4d4f" : "none"}
                     />
                   </div>
+                  {product.orderValue > 0 && (
+                    <div className="best-seller-badge">🔥 Bán Chạy</div>
+                  )}
                   <Card
                     onClick={() => navigate(`/product/${product._id}`)}
                     hoverable
                     cover={
-                      <img
-                        alt={product.name}
-                        src={product.image}
-                        style={{ height: 240, objectFit: "cover" }}
-                      />
+                      <div className="product-image-wrapper">
+                        <img
+                          alt={product.name}
+                          src={product.image}
+                          className="product-image"
+                        />
+                        {product.orderValue > 0 && (
+                          <div className="sales-overlay">
+                            <span className="sales-text">
+                              Đã bán: ₫{product.orderValue.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     }
                   >
                     <Card.Meta
-                      title={product.name}
-                      description={`₫${minPrice.toLocaleString()}`}
+                      title={<div className="product-title">{product.name}</div>}
+                      description={
+                        <div className="product-price">
+                          <span className="price-main">₫{minPrice.toLocaleString()}</span>
+                          {product.rating > 0 && (
+                            <span className="product-rating product-rating-hover">
+                              ⭐ {product.rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      }
                     />
                   </Card>
                 </div>
@@ -107,7 +134,7 @@ const HomePage = () => {
 
       {/* ---------- Category Section ---------- */}
       <CategorySection>
-        <Link to="/amuseables" className="category-card">
+        <Link to="/products" className="category-card">
           <img src="/images/Amuseables.png" alt="Amuseables" />
           <div className="overlay">
             <h3>Meet the Amuseables</h3>
@@ -115,7 +142,7 @@ const HomePage = () => {
           </div>
         </Link>
 
-        <Link to="/jellies" className="category-card">
+        <Link to="/products" className="category-card">
           <img src="/images/Jellies.png" alt="Popular Jellies" />
           <div className="overlay">
             <h3>Discover Popular Jellies</h3>
@@ -123,7 +150,7 @@ const HomePage = () => {
           </div>
         </Link>
 
-        <Link to="/bag-charms" className="category-card">
+        <Link to="/products" className="category-card">
           <img src="/images/Bags_Charms.png" alt="Bags and Charms" />
           <div className="overlay">
             <h3>Style Your Look</h3>

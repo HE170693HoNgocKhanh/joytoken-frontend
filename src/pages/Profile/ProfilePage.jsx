@@ -14,6 +14,8 @@ import {
   Col,
   Avatar,
   Spin,
+  Select,
+  Alert,
 } from "antd";
 import {
   UserOutlined,
@@ -25,8 +27,12 @@ import {
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
+import axios from "axios";
 import { userService } from "../../services";
 import { useAuth } from "../../hooks/useAuth";
+
+// API endpoint cho địa chỉ Việt Nam
+const VIETNAM_API_BASE = "https://provinces.open-api.vn/api";
 
 const { Title, Text } = Typography;
 
@@ -43,9 +49,138 @@ const ProfilePage = () => {
   const [sendingOtp, setSendingOtp] = useState(false);
   const { updateUser } = useAuth();
 
+  // ✅ State cho địa chỉ Việt Nam
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+  
+  // ✅ State cho địa chỉ được chọn
+  const [selectedProvince, setSelectedProvince] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [selectedWard, setSelectedWard] = useState(null);
+
+  // ✅ State cho thông báo thành công trên trang
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
   useEffect(() => {
     fetchProfile();
+    fetchProvinces();
   }, []);
+
+  // ✅ Load danh sách tỉnh/thành phố
+  const fetchProvinces = async () => {
+    try {
+      setLoadingProvinces(true);
+      const response = await axios.get(`${VIETNAM_API_BASE}/p/`);
+      const provincesData = response.data.map((p) => ({
+        value: p.code,
+        label: p.name,
+        name: p.name,
+      }));
+      setProvinces(provincesData);
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+      message.error("Không thể tải danh sách tỉnh/thành phố");
+    } finally {
+      setLoadingProvinces(false);
+    }
+  };
+
+  // ✅ Load danh sách quận/huyện khi chọn tỉnh/thành phố
+  useEffect(() => {
+    if (!selectedProvince) {
+      setDistricts([]);
+      setWards([]);
+      setSelectedDistrict(null);
+      setSelectedWard(null);
+      return;
+    }
+
+    const fetchDistricts = async () => {
+      try {
+        setLoadingDistricts(true);
+        const response = await axios.get(
+          `${VIETNAM_API_BASE}/p/${selectedProvince}?depth=2`
+        );
+        const districtsData = response.data.districts?.map((d) => ({
+          value: d.code,
+          label: d.name,
+          name: d.name,
+        })) || [];
+        setDistricts(districtsData);
+        // Reset district và ward khi đổi tỉnh/thành phố
+        setSelectedDistrict(null);
+        setSelectedWard(null);
+        setWards([]);
+        // Clear địa chỉ trong form
+        form.setFieldsValue({ address: "" });
+      } catch (error) {
+        console.error("Error fetching districts:", error);
+        message.error("Không thể tải danh sách quận/huyện");
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+    fetchDistricts();
+  }, [selectedProvince]);
+
+  // ✅ Load danh sách phường/xã khi chọn quận/huyện
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setWards([]);
+      setSelectedWard(null);
+      return;
+    }
+
+    const fetchWards = async () => {
+      try {
+        setLoadingWards(true);
+        const response = await axios.get(
+          `${VIETNAM_API_BASE}/d/${selectedDistrict}?depth=2`
+        );
+        const wardsData = response.data.wards?.map((w) => ({
+          value: w.code,
+          label: w.name,
+          name: w.name,
+        })) || [];
+        setWards(wardsData);
+        // Reset ward khi đổi quận/huyện
+        setSelectedWard(null);
+        // Clear địa chỉ trong form
+        form.setFieldsValue({ address: "" });
+      } catch (error) {
+        console.error("Error fetching wards:", error);
+        message.error("Không thể tải danh sách phường/xã");
+      } finally {
+        setLoadingWards(false);
+      }
+    };
+    fetchWards();
+  }, [selectedDistrict]);
+
+  // ✅ Tạo chuỗi địa chỉ khi chọn đủ 3 mục
+  useEffect(() => {
+    if (selectedProvince && selectedDistrict && selectedWard) {
+      const provinceName = provinces.find((p) => p.value === selectedProvince)?.name || "";
+      const districtName = districts.find((d) => d.value === selectedDistrict)?.name || "";
+      const wardName = wards.find((w) => w.value === selectedWard)?.name || "";
+      
+      if (provinceName && districtName && wardName) {
+        const addressString = `${wardName}, ${districtName}, ${provinceName}`;
+        form.setFieldsValue({ address: addressString });
+      }
+    }
+  }, [selectedProvince, selectedDistrict, selectedWard, provinces, districts, wards, form]);
+
+  // ✅ Parse địa chỉ khi provinces đã load và có user address
+  useEffect(() => {
+    if (provinces.length > 0 && user?.address && !selectedProvince && !selectedDistrict && !selectedWard) {
+      parseAddressString(user.address);
+    }
+  }, [provinces, user?.address]);
 
   const fetchProfile = async () => {
     try {
@@ -81,6 +216,8 @@ const ProfilePage = () => {
         phone: userData.phone || "",
         address: userData.address || "",
       });
+
+      // Parse địa chỉ sẽ được xử lý trong useEffect khi provinces đã load
     } catch (error) {
       console.error("❌ Error fetching profile:", error);
       
@@ -100,6 +237,37 @@ const ProfilePage = () => {
     try {
       setLoading(true);
       console.log("📝 Updating profile with values:", values);
+      
+      // ✅ Validate các trường bắt buộc trước khi submit
+      if (!values.name || !values.name.trim()) {
+        message.error("Vui lòng nhập họ và tên");
+        setLoading(false);
+        return;
+      }
+      
+      if (!values.phone || !values.phone.trim()) {
+        message.error("Vui lòng nhập số điện thoại");
+        setLoading(false);
+        return;
+      }
+      
+      if (!/^[0-9]{10,11}$/.test(values.phone)) {
+        message.error("Số điện thoại phải có 10-11 chữ số");
+        setLoading(false);
+        return;
+      }
+      
+      if (!selectedProvince || !selectedDistrict || !selectedWard) {
+        message.error("Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện và Phường/Xã");
+        setLoading(false);
+        return;
+      }
+      
+      if (!values.address || !values.address.trim()) {
+        message.error("Vui lòng chọn địa chỉ");
+        setLoading(false);
+        return;
+      }
       
       const response = await userService.updateProfile(values);
       console.log("✅ Update profile response:", response);
@@ -134,8 +302,38 @@ const ProfilePage = () => {
         phone: updatedUser.phone,
         address: updatedUser.address,
       });
+
+      // ✅ Cập nhật lại dropdown địa chỉ nếu có địa chỉ mới
+      if (updatedUser.address) {
+        // Clear các selection cũ và parse lại địa chỉ mới
+        setSelectedProvince(null);
+        setSelectedDistrict(null);
+        setSelectedWard(null);
+        // Parse địa chỉ mới sau một chút để đảm bảo provinces đã load
+        setTimeout(() => {
+          if (provinces.length > 0) {
+            parseAddressString(updatedUser.address);
+          }
+        }, 300);
+      } else {
+        // Nếu không có địa chỉ, clear các selection
+        setSelectedProvince(null);
+        setSelectedDistrict(null);
+        setSelectedWard(null);
+      }
       
-      message.success("Cập nhật thông tin thành công!");
+      // ✅ Hiển thị thông báo thành công
+      message.success({
+        content: "Cập nhật thông tin thành công!",
+        duration: 3,
+      });
+
+      // ✅ Hiển thị thông báo trên trang
+      setShowSuccessMessage(true);
+      // Tự động ẩn sau 5 giây
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
     } catch (error) {
       console.error("❌ Error updating profile:", error);
       
@@ -255,6 +453,65 @@ const ProfilePage = () => {
     }
   };
 
+  // ✅ Parse địa chỉ string để set lại các dropdown
+  const parseAddressString = async (addressString) => {
+    if (!addressString || typeof addressString !== "string") return;
+    
+    // Format: "Xã/Phường, Quận/Huyện, Tỉnh/Thành phố"
+    const parts = addressString.split(",").map((p) => p.trim());
+    if (parts.length !== 3) return;
+
+    const [wardName, districtName, provinceName] = parts;
+
+    try {
+      // Tìm tỉnh/thành phố
+      const province = provinces.find((p) => p.name === provinceName);
+      if (province) {
+        setSelectedProvince(province.value);
+        
+        // Đợi districts load xong
+        setTimeout(async () => {
+          const districtsResponse = await axios.get(
+            `${VIETNAM_API_BASE}/p/${province.value}?depth=2`
+          );
+          const districtsData = districtsResponse.data.districts?.map((d) => ({
+            value: d.code,
+            label: d.name,
+            name: d.name,
+          })) || [];
+          setDistricts(districtsData);
+          
+          // Tìm quận/huyện
+          const district = districtsData.find((d) => d.name === districtName);
+          if (district) {
+            setSelectedDistrict(district.value);
+            
+            // Đợi wards load xong
+            setTimeout(async () => {
+              const wardsResponse = await axios.get(
+                `${VIETNAM_API_BASE}/d/${district.value}?depth=2`
+              );
+              const wardsData = wardsResponse.data.wards?.map((w) => ({
+                value: w.code,
+                label: w.name,
+                name: w.name,
+              })) || [];
+              setWards(wardsData);
+              
+              // Tìm phường/xã
+              const ward = wardsData.find((w) => w.name === wardName);
+              if (ward) {
+                setSelectedWard(ward.value);
+              }
+            }, 300);
+          }
+        }, 300);
+      }
+    } catch (error) {
+      console.error("Error parsing address:", error);
+    }
+  };
+
   const uploadProps = {
     beforeUpload: (file) => {
       const isImage = file.type.startsWith("image/");
@@ -311,6 +568,23 @@ const ProfilePage = () => {
           <UserOutlined style={{ marginRight: 8 }} />
           Thông tin cá nhân
         </Title>
+
+        {/* ✅ Thông báo thành công trên trang */}
+        {showSuccessMessage && (
+          <Alert
+            message="Cập nhật thông tin thành công!"
+            type="success"
+            showIcon
+            closable
+            onClose={() => setShowSuccessMessage(false)}
+            style={{
+              marginBottom: 24,
+              borderRadius: 8,
+              fontSize: "16px",
+              padding: "12px 16px",
+            }}
+          />
+        )}
 
         {/* Thông tin tài khoản */}
         {user && (
@@ -475,12 +749,13 @@ const ProfilePage = () => {
                   label="Số điện thoại"
                   name="phone"
                   rules={[
+                    { required: true, message: "Vui lòng nhập số điện thoại" },
                     {
                       pattern: /^[0-9]{10,11}$/,
                       message: "Số điện thoại phải có 10-11 chữ số",
                     },
                   ]}
-                  help="Nhập số điện thoại 10-11 chữ số (không bắt buộc)"
+                  help="Nhập số điện thoại 10-11 chữ số"
                 >
                   <Input
                     prefix={<PhoneOutlined />}
@@ -496,23 +771,151 @@ const ProfilePage = () => {
                   label="Địa chỉ"
                   name="address"
                   rules={[
+                    { required: true, message: "Vui lòng chọn địa chỉ" },
                     {
-                      min: 5,
-                      message: "Địa chỉ phải có ít nhất 5 ký tự",
-                    },
-                    {
-                      max: 200,
-                      message: "Địa chỉ không được vượt quá 200 ký tự",
+                      validator: (_, value) => {
+                        if (!value || !value.trim()) {
+                          return Promise.reject("Vui lòng chọn địa chỉ");
+                        }
+                        if (!selectedProvince || !selectedDistrict || !selectedWard) {
+                          return Promise.reject("Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện và Phường/Xã");
+                        }
+                        return Promise.resolve();
+                      },
                     },
                   ]}
-                  help="Nhập địa chỉ của bạn (tối thiểu 5 ký tự, không bắt buộc)"
+                  help="Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện và Phường/Xã"
                 >
                   <Input
                     prefix={<HomeOutlined />}
-                    placeholder="Nhập địa chỉ"
+                    placeholder="Địa chỉ sẽ được tạo tự động sau khi chọn đầy đủ"
                     size="large"
-                    allowClear
+                    readOnly
+                    style={{ background: "#f5f5f5" }}
                   />
+                </Form.Item>
+              </Col>
+
+              {/* ✅ Dropdowns cho địa chỉ Việt Nam */}
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="Tỉnh/Thành phố"
+                  required
+                  rules={[
+                    {
+                      validator: () => {
+                        if (!selectedProvince) {
+                          return Promise.reject("Vui lòng chọn Tỉnh/Thành phố");
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Select
+                    placeholder="Chọn Tỉnh/Thành phố"
+                    size="large"
+                    value={selectedProvince}
+                    onChange={(value) => {
+                      setSelectedProvince(value);
+                      setSelectedDistrict(null);
+                      setSelectedWard(null);
+                      form.setFieldsValue({ address: "" });
+                    }}
+                    loading={loadingProvinces}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={loadingProvinces ? <Spin size="small" /> : null}
+                  >
+                    {provinces.map((province) => (
+                      <Select.Option key={province.value} value={province.value}>
+                        {province.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="Quận/Huyện"
+                  required
+                  rules={[
+                    {
+                      validator: () => {
+                        if (!selectedDistrict) {
+                          return Promise.reject("Vui lòng chọn Quận/Huyện");
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Select
+                    placeholder="Chọn Quận/Huyện"
+                    size="large"
+                    value={selectedDistrict}
+                    onChange={(value) => {
+                      setSelectedDistrict(value);
+                      setSelectedWard(null);
+                      form.setFieldsValue({ address: "" });
+                    }}
+                    disabled={!selectedProvince}
+                    loading={loadingDistricts}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={loadingDistricts ? <Spin size="small" /> : null}
+                  >
+                    {districts.map((district) => (
+                      <Select.Option key={district.value} value={district.value}>
+                        {district.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="Phường/Xã"
+                  required
+                  rules={[
+                    {
+                      validator: () => {
+                        if (!selectedWard) {
+                          return Promise.reject("Vui lòng chọn Phường/Xã");
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Select
+                    placeholder="Chọn Phường/Xã"
+                    size="large"
+                    value={selectedWard}
+                    onChange={(value) => {
+                      setSelectedWard(value);
+                      form.setFieldsValue({ address: "" });
+                    }}
+                    disabled={!selectedDistrict}
+                    loading={loadingWards}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={loadingWards ? <Spin size="small" /> : null}
+                  >
+                    {wards.map((ward) => (
+                      <Select.Option key={ward.value} value={ward.value}>
+                        {ward.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
             </Row>

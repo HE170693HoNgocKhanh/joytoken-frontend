@@ -2,8 +2,29 @@ import React from "react";
 import styled from "styled-components";
 import { Image } from "antd";
 
-const ChatMessage = ({ message, isOwn }) => {
+const ChatMessage = ({ message, isOwn, highlightText }) => {
   const isImage = message.type === "image";
+  
+  // Highlight search text in message content
+  const highlightContent = (text, query) => {
+    if (!query || !text) return text;
+    try {
+      // Escape special regex characters
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escapedQuery})`, "gi");
+      const parts = text.split(regex);
+      return parts.map((part, index) => 
+        regex.test(part) ? (
+          <HighlightedText key={index}>{part}</HighlightedText>
+        ) : (
+          part
+        )
+      );
+    } catch (error) {
+      // Fallback if regex fails
+      return text;
+    }
+  };
   
   const formatTime = (dateString) => {
     if (!dateString) return "";
@@ -36,7 +57,11 @@ const ChatMessage = ({ message, isOwn }) => {
             />
           </ImageContainer>
         ) : (
-          <MessageText>{message.content}</MessageText>
+          <MessageText>
+            {highlightText 
+              ? highlightContent(message.content, highlightText)
+              : message.content}
+          </MessageText>
         )}
         <MessageTime>{formatTime(message.createdAt || message.time)}</MessageTime>
       </Bubble>
@@ -107,4 +132,12 @@ const MessageTime = styled.div`
   margin-top: 2px;
   align-self: flex-end;
   color: inherit;
+`;
+
+const HighlightedText = styled.span`
+  background: #fff3cd;
+  color: #856404;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
 `;

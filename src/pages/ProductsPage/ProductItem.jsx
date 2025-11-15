@@ -1,45 +1,98 @@
-import { Link } from "react-router-dom";
-import { FaStar } from "react-icons/fa";
-import HeartButton from "../../components/ProductComponent/HeartButton";
+import { useNavigate } from "react-router-dom";
+import { Card } from "antd";
+import { Heart } from "lucide-react";
+import { useWishlist } from "../../hooks/useWishlist";
 import {
-  Card,
+  ProductCardWrapper,
+  ProductImageWrapper,
   ProductImage,
-  ProductName,
+  HeartIcon,
+  BestSellerBadge,
+  ProductTitle,
   ProductPrice,
-  Label,
-  Rating,
+  ProductRating,
   AddButton,
-  HeartButtonWrapper,
+  CardStyles,
 } from "./style";
 
 const ProductItem = ({ product, onAddToCart }) => {
+  const navigate = useNavigate();
+  const { toggle, has } = useWishlist();
+  
+  const minPrice = product.variants?.length
+    ? Math.min(...product.variants.map((v) => v.price))
+    : product.price;
+  const isWished = has(product._id);
+
+  const handleWishlistToggle = (e) => {
+    e.stopPropagation();
+    toggle(product._id);
+  };
+
+  const handleCardClick = () => {
+    navigate(`/product/${product._id}`);
+  };
+
   return (
-    <Card>
-      {product.label && <Label>{product.label}</Label>}
-      
-      <HeartButtonWrapper>
-        <HeartButton productId={product._id} withLabel={false} />
-      </HeartButtonWrapper>
+    <CardStyles>
+      <ProductCardWrapper>
+        <div className="product-wrapper">
+          <HeartIcon onClick={handleWishlistToggle}>
+            <Heart
+              size={22}
+              color={isWished ? "#ff4d4f" : "#999"}
+              fill={isWished ? "#ff4d4f" : "none"}
+            />
+          </HeartIcon>
+          
+          {product.orderValue > 0 && (
+            <BestSellerBadge>🔥 Bán Chạy</BestSellerBadge>
+          )}
 
-      <Link
-        to={`/product/${product._id}`}
-        style={{ textDecoration: "none", color: "inherit" }}
-      >
-        <ProductImage src={product.image} alt={product.name} />
-        <ProductName>{product.name}</ProductName>
-        <ProductPrice>₫{(product.price || 0).toLocaleString("vi-VN")}</ProductPrice>
-      </Link>
+          <Card
+            onClick={handleCardClick}
+            hoverable
+            cover={
+              <ProductImageWrapper>
+                <ProductImage
+                  alt={product.name}
+                  src={product.image}
+                  className="product-image"
+                />
+                {product.orderValue > 0 && (
+                  <div className="sales-overlay">
+                    <span className="sales-text">
+                      Đã bán: ₫{product.orderValue.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </ProductImageWrapper>
+            }
+          >
+            <Card.Meta
+              title={<ProductTitle>{product.name}</ProductTitle>}
+              description={
+                <div className="product-price">
+                  <ProductPrice>₫{minPrice.toLocaleString()}</ProductPrice>
+                  {product.rating > 0 && (
+                    <ProductRating className="product-rating-hover">
+                      ⭐ {product.rating.toFixed(1)}
+                    </ProductRating>
+                  )}
+                </div>
+              }
+            />
+          </Card>
 
-      {product.rating > 0 && (
-        <Rating>
-          {Array.from({ length: Math.floor(product.rating) || 0 }).map((_, i) => (
-            <FaStar key={i} color="#f5a623" />
-          ))}
-        </Rating>
-      )}
-
-      <AddButton onClick={() => onAddToCart(product)}>Thêm vào giỏ hàng</AddButton>
-    </Card>
+          <AddButton onClick={() => {
+            onAddToCart(product);
+            navigate(`/product/${product._id}`)
+            }}>
+            Thêm vào giỏ hàng
+          </AddButton>
+        </div>
+      </ProductCardWrapper>
+    </CardStyles>
   );
 };
 

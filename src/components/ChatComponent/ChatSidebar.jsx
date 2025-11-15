@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { Modal, Button } from "antd";
+import { HomeOutlined } from "@ant-design/icons";
 import { userService } from "../../services/userService";
 import { conversationService } from "../../services/conversationService";
 import { useNavigate } from "react-router-dom";
@@ -186,6 +187,13 @@ const ChatSidebar = ({
       <Header>
         <Title>Đoạn chat</Title>
         <HeaderIcons>
+          <IconButton 
+            title="Quay về trang chủ" 
+            onClick={() => navigate("/")}
+            style={{ fontSize: 18 }}
+          >
+            <HomeOutlined />
+          </IconButton>
           <IconButton title="Tùy chọn">⋯</IconButton>
           <IconButton title="Mở rộng">⛶</IconButton>
           {isAdminStaffSeller && (

@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import styled from "styled-components";
+import { Input } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
 import QuickReplies from "./QuickReplies";
@@ -8,12 +10,34 @@ const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
   const currentUser = JSON.parse(localStorage.getItem("user")) || null;
   const currentUserId = currentUser?.id;
   const messageEndRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // Reset search when conversation changes
+  useEffect(() => {
+    setSearchQuery("");
+    setShowSearch(false);
+  }, [conversation?._id]);
+
+  // Filter messages based on search query
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return messages;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return messages.filter((msg) => {
+      if (msg.type === "text") {
+        return (msg.content || "").toLowerCase().includes(query);
+      }
+      return false;
+    });
+  }, [messages, searchQuery]);
 
   if (!conversation) {
     return (
@@ -51,18 +75,49 @@ const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
           </HeaderInfo>
         </HeaderLeft>
         <HeaderIcons>
-          <HeaderIconButton title="Tìm kiếm" aria-label="Tìm kiếm">🔍</HeaderIconButton>
+          <HeaderIconButton 
+            title="Tìm kiếm" 
+            aria-label="Tìm kiếm"
+            onClick={() => setShowSearch(!showSearch)}
+            style={{ background: showSearch ? "#e7f3ff" : "transparent" }}
+          >
+            <SearchOutlined style={{ fontSize: 18 }} />
+          </HeaderIconButton>
           <HeaderIconButton title="Thông tin" aria-label="Thông tin">ℹ️</HeaderIconButton>
           <HeaderIconButton title="Tùy chọn" aria-label="Tùy chọn">⋯</HeaderIconButton>
         </HeaderIcons>
       </Header>
 
+      {/* Search Bar */}
+      {showSearch && (
+        <SearchBarContainer>
+          <Input
+            placeholder="Tìm kiếm tin nhắn..."
+            prefix={<SearchOutlined />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            allowClear
+            size="large"
+            style={{ borderRadius: 20 }}
+          />
+          {searchQuery && (
+            <SearchResultText>
+              Tìm thấy {filteredMessages.length} tin nhắn
+            </SearchResultText>
+          )}
+        </SearchBarContainer>
+      )}
+
       <MessageArea>
         <MessagesWrapper>
-          {messages.length === 0 ? (
-            <EmptyMessageText>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</EmptyMessageText>
+          {filteredMessages.length === 0 ? (
+            <EmptyMessageText>
+              {searchQuery 
+                ? `Không tìm thấy tin nhắn nào với "${searchQuery}"`
+                : "Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!"}
+            </EmptyMessageText>
           ) : (
-            messages.map((m) => (
+            filteredMessages.map((m) => (
               <ChatMessage
                 key={m._id}
                 message={{
@@ -72,6 +127,7 @@ const ChatWindow = ({ conversation, messages, onSend, onSendImage }) => {
                   time: m.createdAt,
                 }}
                 isOwn={m.sender?._id === currentUserId}
+                highlightText={searchQuery}
               />
             ))
           )}
@@ -245,4 +301,17 @@ const EmptyMessageText = styled.div`
   border-radius: 12px;
   margin: 16px auto;
   max-width: 400px;
+`;
+
+const SearchBarContainer = styled.div`
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e6eb;
+`;
+
+const SearchResultText = styled.div`
+  font-size: 12px;
+  color: #65676b;
+  margin-top: 8px;
+  text-align: center;
 `;
